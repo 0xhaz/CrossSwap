@@ -11,7 +11,7 @@ pub fn generate_gkr_proof<C: Config>(
     let mut rng = thread_rng();
     let mut proof_data: Vec<u8> = (0..4).map(|_| rng.gen()).collect(); 
 
-    // ✅ If there is a previous proof, hash it and append to new proof
+    // If there is a previous proof, hash it and append to new proof
     if let Some(prev) = previous_proof {
         let mut hasher = Keccak::v256();
         hasher.update(&prev.bytes);  
@@ -42,9 +42,9 @@ pub fn verify_gkr_proof<C: Config>(
         let mut hash_result = [0u8; 32];
         hasher.finalize(&mut hash_result);
 
-        // ✅ Check if current proof includes previous proof commitment
+        // Check if current proof includes previous proof commitment
         return proof.bytes.ends_with(&hash_result[..]);
     }
 
-    true  // ✅ If no previous proof, just check proof is non-empty
+    true  // If no previous proof, just check proof is non-empty
 }

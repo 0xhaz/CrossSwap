@@ -71,6 +71,8 @@ contract CrossSwapTest is Test, Fixtures {
 
         deployAndApprovePosm(manager);
 
+        verifier = new GKRVerifier();
+
         address flagsSourceChain = address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x4444 << 144));
 
         address flagsDestinationChain = address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x8888 << 144));
@@ -90,7 +92,8 @@ contract CrossSwapTest is Test, Fixtures {
         sourceRouterAddress = address(sourceRouter);
         destinationRouterAddress = address(destinationRouter);
 
-        bytes memory constructorArgs = abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress);
+        bytes memory constructorArgs =
+            abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress, verifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs, flagsSourceChain);
 
         hookSource = CrossSwap(flagsSourceChain);
@@ -105,7 +108,7 @@ contract CrossSwapTest is Test, Fixtures {
 
         deployFreshManagerAndRouters();
         bytes memory constructorArgs2 =
-            abi.encode(manager, authorizedUser, destinationHookChainId, destinationRouterAddress);
+            abi.encode(manager, authorizedUser, destinationHookChainId, destinationRouterAddress, verifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs2, flagsDestinationChain);
         hookDestination = CrossSwap(flagsDestinationChain);
         hookAddressDestination = address(hookDestination);
@@ -149,6 +152,12 @@ contract CrossSwapTest is Test, Fixtures {
 
         console2.log("balance0Before", balance0Before);
         console2.log("balance1Before", balance1Before);
+
+        bytes memory liquidityData = abi.encode(key, tickLower, tickUpper, 10_000_000);
+        bytes memory proofData = verifier.generateProof(liquidityData);
+
+        bool isValidProof = verifier.verifyProof(proofData);
+        assertTrue(isValidProof, "Proof is not valid");
 
         hookSource.addLiquidityWithCrossChainStrategy(
             key, IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 10_000_000, bytes32(0)), 1, proofData

@@ -18,6 +18,7 @@ import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol
 import {EasyPosm} from "test/utils/EasyPosm.sol";
 import {Fixtures} from "test/utils/Fixtures.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {GKRVerifier} from "src/zk/GKRVerifier.sol";
 
 import {
     CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper
@@ -29,7 +30,7 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
 
     address public sourceRouterAddress;
     address public destinatioRouterAddress;
-
+    GKRVerifier verifier;
     uint64 public destinationChainSelector;
 
     using EasyPosm for IPositionManager;
@@ -66,6 +67,8 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
 
         deployAndApprovePosm(manager);
 
+        verifier = new GKRVerifier();
+
         // Deploy the hook to an address with the correct flags
         address flagSourceChain = address(
             uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x4444 << 144) // Namespace the hook to avoid collisions
@@ -92,9 +95,10 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
         sourceRouterAddress = address(sourceRouter);
         destinatioRouterAddress = address(destinationRouter);
 
-        bytes memory constructorArgs = abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress);
+        bytes memory constructorArgs =
+            abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress, verifier);
         bytes memory constructorArgs2 =
-            abi.encode(manager, authorizedUser, destinationHookChainId, destinatioRouterAddress);
+            abi.encode(manager, authorizedUser, destinationHookChainId, destinatioRouterAddress, verifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs, flagSourceChain);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs2, flagDestinationChain);
 

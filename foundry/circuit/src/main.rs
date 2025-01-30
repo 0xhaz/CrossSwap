@@ -18,23 +18,23 @@ fn main() {
     
     circuit.define(&mut root_builder);
 
-    // ✅ Instantiate Config Objects Instead of Accessing as Constants
+    //  Instantiate Config Objects Instead of Accessing as Constants
     let gkr_config = <BN254Config as Config>::DefaultGKRConfig::default();
     let field_config = <BN254Config as Config>::DefaultGKRFieldConfig::default();
 
-    // ✅ Generate first proof
+    //  Generate first proof
     let proof_1 = generate_gkr_proof::<BN254Config>(&gkr_config, &field_config, None);
     println!("Generated Proof 1: {:?}", proof_1);
 
-    // ✅ Generate recursive proof (compressed)
+    // Generate recursive proof (compressed)
     let proof_2 = generate_gkr_proof::<BN254Config>(&gkr_config, &field_config, Some(&proof_1));
     println!("Generated Proof 2 (compressed): {:?}", proof_2);
 
-    // ✅ Verify first proof
+    //  Verify first proof
     let is_valid_1 = verify_gkr_proof::<BN254Config>(&gkr_config, &field_config, &proof_1, None);
     println!("Proof 1 verification result: {}", is_valid_1);
 
-    // ✅ Verify compressed proof (recursive check)
+    //  Verify compressed proof (recursive check)
     let is_valid_2 = verify_gkr_proof::<BN254Config>(&gkr_config, &field_config, &proof_2, Some(&proof_1));
     println!("Proof 2 verification result: {}", is_valid_2);
 }
