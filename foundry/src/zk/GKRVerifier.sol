@@ -5,7 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 
 /// @title GKR Verifier for Recursive GKR Compression
 /// @notice This contract generates and verifies proofs for the recursive GKR compression algorithm
-contract GRKVerifier {
+contract GKRVerifier {
     struct GRKProof {
         bytes proofData;
     }

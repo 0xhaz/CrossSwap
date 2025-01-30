@@ -25,6 +25,7 @@ import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/
 import {IRouter} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouter.sol";
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 import {Constants, Errors, Events} from "src/libraries/Constants.sol";
+import {GKRVerifier} from "src/zk/GKRVerifier.sol";
 import {console2} from "forge-std/Test.sol";
 
 contract CrossSwap is CCIPReceiver, BaseHook {
@@ -34,6 +35,8 @@ contract CrossSwap is CCIPReceiver, BaseHook {
     using SafeCast for uint256;
     using SafeCast for uint128;
     using StateLibrary for IPoolManager;
+
+    GKRVerifier public verifier;
 
     /*//////////////////////////////////////////////////////////////
                            STORAGE VARIABLES
@@ -57,12 +60,16 @@ contract CrossSwap is CCIPReceiver, BaseHook {
 
     /// @notice Constructor initializes the contract with the address of the router
     /// @param router The address of the router contract
-    constructor(IPoolManager poolManager, address authorizedUser, uint256 hookChainId, address router)
-        BaseHook(poolManager)
-        CCIPReceiver(router)
-    {
+    constructor(
+        IPoolManager poolManager,
+        address authorizedUser,
+        uint256 hookChainId,
+        address router,
+        GKRVerifier _verifier
+    ) BaseHook(poolManager) CCIPReceiver(router) {
         authorizedUser_ = authorizedUser;
         hookChainId_ = hookChainId;
+        verifier = _verifier;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -136,8 +143,11 @@ contract CrossSwap is CCIPReceiver, BaseHook {
     function addLiquidityWithCrossChainStrategy(
         PoolKey memory key,
         IPoolManager.ModifyLiquidityParams memory params,
-        uint256 strategyId
+        uint256 strategyId,
+        bytes calldata gkrProof
     ) external returns (BalanceDelta delta) {
+        require(verifier.verifyProof(gkrProof), "CrossSwap: Invalid GKR proof");
+
         delta = abi.decode(
             poolManager.unlock(
                 abi.encode(

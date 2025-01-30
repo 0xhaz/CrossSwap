@@ -18,6 +18,7 @@ import {EasyPosm} from "test/utils/EasyPosm.sol";
 import {Fixtures} from "test/utils/Fixtures.sol";
 import {CrossSwap} from "src/CrossSwap.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {GKRVerifier} from "src/zk/GKRVerifier.sol";
 
 import {
     CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper
@@ -26,6 +27,8 @@ import {
 contract CrossSwapTest is Test, Fixtures {
     CCIPLocalSimulator public ccipLocalSimulator;
     BurnMintERC677Helper public ccipBnMToken;
+
+    GKRVerifier verifier;
 
     address public sourceRouterAddress;
     address public destinationRouterAddress;
@@ -57,6 +60,8 @@ contract CrossSwapTest is Test, Fixtures {
     uint256 tokenId;
     int24 tickLower;
     int24 tickUpper;
+
+    bytes proofData = abi.encodePacked(keccak256("proofData"));
 
     PoolKey key2;
 
@@ -95,6 +100,8 @@ contract CrossSwapTest is Test, Fixtures {
         key = PoolKey(currency0, currency1, 3000, 60, IHooks(hookSource));
         poolId = key.toId();
         manager.initialize(key, SQRT_PRICE_1_1);
+
+        verifier = new GKRVerifier();
 
         deployFreshManagerAndRouters();
         bytes memory constructorArgs2 =
@@ -144,7 +151,7 @@ contract CrossSwapTest is Test, Fixtures {
         console2.log("balance1Before", balance1Before);
 
         hookSource.addLiquidityWithCrossChainStrategy(
-            key, IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 10_000_000, bytes32(0)), 1
+            key, IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 10_000_000, bytes32(0)), 1, proofData
         );
 
         uint256 balance0AfterManager = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(manager));

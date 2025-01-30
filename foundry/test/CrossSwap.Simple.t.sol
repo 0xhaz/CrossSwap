@@ -18,6 +18,7 @@ import {EasyPosm} from "test/utils/EasyPosm.sol";
 import {Fixtures} from "test/utils/Fixtures.sol";
 import {CrossSwap} from "src/CrossSwap.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {GKRVerifier} from "src/zk/GKRVerifier.sol";
 
 import {
     CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper
@@ -29,6 +30,7 @@ contract CrossSwapTest is Test, Fixtures {
     BurnMintERC677Helper public ccipBnMToken;
     CrossSwap hookReceiver;
     address hookReceiverAddress;
+    GKRVerifier verifier;
 
     using EasyPosm for IPositionManager;
     using CurrencyLibrary for Currency;
@@ -58,9 +60,12 @@ contract CrossSwapTest is Test, Fixtures {
 
         deployAndApprovePosm(manager);
 
+        verifier = new GKRVerifier();
+
         address flags = address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x4444 << 144));
 
-        bytes memory constructorArgs = abi.encode(manager, authorizedUser, originalHookChainId, address(0xBEEF));
+        bytes memory constructorArgs =
+            abi.encode(manager, authorizedUser, originalHookChainId, address(0xBEEF), verifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs, flags);
         hook = CrossSwap(flags);
         hookAddress = address(hook);
@@ -105,6 +110,8 @@ contract CrossSwapTest is Test, Fixtures {
         assertTrue(revertAsExpected, "Should have reverted");
     }
 
+    function test_GKRCompressionVerification() public {}
+
     function test_AddLiquidityToStrategy() public {
         // Provide full-range liquidity to the pool
         // Add some initial liquidity through the custom `addLiquidity` function
@@ -117,8 +124,14 @@ contract CrossSwapTest is Test, Fixtures {
         uint256 balance0Before = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
         uint256 balance1Before = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(this));
 
+        bytes memory liquidityData = abi.encode(key, tickLower, tickUpper, 10_000_000);
+        bytes memory proofData = verifier.generateProof(liquidityData);
+
+        bool isValidProof = verifier.verifyProof(proofData);
+        assertTrue(isValidProof, "Proof is not valid");
+
         hook.addLiquidityWithCrossChainStrategy(
-            key, IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 10_000_000, bytes32(0)), 1
+            key, IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 10_000_000, bytes32(0)), 1, proofData
         );
 
         uint256 balance0After = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
