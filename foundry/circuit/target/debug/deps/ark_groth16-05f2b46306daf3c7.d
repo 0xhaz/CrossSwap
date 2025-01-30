@@ -1,0 +1,10 @@
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/debug/deps/libark_groth16-05f2b46306daf3c7.rmeta: /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/lib.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/r1cs_to_qap.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/data_structures.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/generator.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/prover.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/verifier.rs
+
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/debug/deps/ark_groth16-05f2b46306daf3c7.d: /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/lib.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/r1cs_to_qap.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/data_structures.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/generator.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/prover.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/verifier.rs
+
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/lib.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/r1cs_to_qap.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/data_structures.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/generator.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/prover.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-groth16-0.3.0/src/verifier.rs:

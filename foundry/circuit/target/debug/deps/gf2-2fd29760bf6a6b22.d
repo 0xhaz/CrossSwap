@@ -1,0 +1,12 @@
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/debug/deps/libgf2-2fd29760bf6a6b22.rmeta: /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/lib.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x8.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x64.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128/neon.rs
+
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/debug/deps/libgf2-2fd29760bf6a6b22.rlib: /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/lib.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x8.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x64.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128/neon.rs
+
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/debug/deps/gf2-2fd29760bf6a6b22.d: /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/lib.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x8.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x64.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128.rs /Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128/neon.rs
+
+/Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/lib.rs:
+/Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2.rs:
+/Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x8.rs:
+/Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x64.rs:
+/Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128.rs:
+/Users/haz/.cargo/git/checkouts/expander-25d40ea8b5bd2a4a/f756288/arith/gf2/src/gf2x128/neon.rs:
