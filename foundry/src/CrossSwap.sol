@@ -163,9 +163,9 @@ contract CrossSwap is BaseHook {
         PoolKey memory key,
         IPoolManager.ModifyLiquidityParams memory params,
         uint256 strategyId,
-        bytes calldata gkrProof
+        bytes calldata zkProof
     ) external returns (BalanceDelta delta) {
-        require(zkVerifier.verifyProof(gkrProof), "CrossSwap: Invalid GKR proof");
+        require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid GKR proof");
 
         delta = abi.decode(
             poolManager.unlock(
@@ -189,7 +189,7 @@ contract CrossSwap is BaseHook {
     function executeSwapWithPrivacy(
         PoolKey memory key,
         IPoolManager.SwapParams memory params,
-        uint16 destinationChainSelector,
+        uint16 destinationChainId,
         address destinationHook
     ) external {
         bytes memory zkProof = zkVerifier.generateProof(abi.encode(key, params));
@@ -200,7 +200,7 @@ contract CrossSwap is BaseHook {
         _transferCrossChain(
             msg.sender,
             destinationHook,
-            destinationChainSelector,
+            destinationChainId,
             key,
             uint256(params.amountSpecified),
             0,
@@ -221,13 +221,9 @@ contract CrossSwap is BaseHook {
         BalanceDelta delta;
 
         if (isCrossChainIncoming && data.isSwap) {
-            console2.log(unicode"🔄 Executing Cross-Chain Swap on Destination Chain");
-
             require(zkVerifier.verifyProof(data.zkProof), "CrossSwap: Invalid ZK proof");
 
             delta = poolManager.swap(key, data.swapParams, Constants.ZERO_BYTES);
-
-            console2.log(unicode"✅ Cross-Chain Swap Executed Successfully!");
 
             _settleDeltas(sender, key, delta);
 
@@ -256,7 +252,7 @@ contract CrossSwap is BaseHook {
                     _transferCrossChain(
                         sender,
                         strategy.hooks[i],
-                        strategy.chainSelectors[i],
+                        uint16(strategy.chainIds[i]),
                         key,
                         amount0,
                         amount1,
@@ -282,7 +278,7 @@ contract CrossSwap is BaseHook {
     //////////////////////////////////////////////////////////////*/
 
     function sendMessage(
-        uint16 destinationChainSelector,
+        uint16 destinationChainId,
         address sender,
         address receiver,
         address token0,
@@ -297,7 +293,7 @@ contract CrossSwap is BaseHook {
         bytes calldata zkProof
     ) external returns (bytes32 messageId) {
         Constants.SendMessageParams memory params = Constants.SendMessageParams({
-            destinationChainSelector: destinationChainSelector,
+            destinationChainId: destinationChainId,
             receiver: receiver,
             sender: sender,
             token0: token0,
@@ -316,7 +312,7 @@ contract CrossSwap is BaseHook {
     }
 
     function _sendMessage(Constants.SendMessageParams memory params) internal returns (bytes32 messageId) {
-        bytes memory messageData = abi.encode(
+        bytes memory payload = abi.encode(
             params.sender,
             params.token0,
             params.amount0,
@@ -330,11 +326,9 @@ contract CrossSwap is BaseHook {
             params.zkProof
         );
 
-        zkClient.send(
-            params.destinationChainSelector, abi.encodePacked(params.receiver), uint64(block.timestamp), messageData
-        );
+        zkClient.send(params.destinationChainId, abi.encodePacked(params.receiver), uint64(block.timestamp), payload);
 
-        messageId = keccak256(messageData);
+        messageId = keccak256(payload);
     }
 
     /// @notice Function to receive a message from another chain
@@ -344,7 +338,7 @@ contract CrossSwap is BaseHook {
         Constants.SendMessageParams memory params = abi.decode(payload, (Constants.SendMessageParams));
 
         Constants.Message memory receivedMessage = Constants.Message({
-            sourceChainSelector: srcChainId,
+            sourceChainId: srcChainId,
             sender: params.sender,
             token0: params.token0,
             amount0: params.amount0,
@@ -379,7 +373,7 @@ contract CrossSwap is BaseHook {
         external
         view
         returns (
-            uint16 sourceChainSelector,
+            uint16 sourceChainId,
             address sender,
             address token0,
             uint256 amount0,
@@ -394,7 +388,7 @@ contract CrossSwap is BaseHook {
         Constants.Message memory detail = messageDetail[messageId];
         if (detail.sender == address(0)) revert Errors.MessageIdNotExists(messageId);
         return (
-            detail.sourceChainSelector,
+            detail.sourceChainId,
             detail.sender,
             detail.token0,
             detail.amount0,
@@ -412,7 +406,7 @@ contract CrossSwap is BaseHook {
         view
         returns (
             bytes32 messageId,
-            uint16 sourceChainSelector,
+            uint16 sourceChainId,
             address sender,
             address token0,
             uint256 amount0,
@@ -425,13 +419,7 @@ contract CrossSwap is BaseHook {
         messageId = receivedMessages[index];
         Constants.Message memory detail = messageDetail[messageId];
         return (
-            messageId,
-            detail.sourceChainSelector,
-            detail.sender,
-            detail.token0,
-            detail.amount0,
-            detail.token1,
-            detail.amount1
+            messageId, detail.sourceChainId, detail.sender, detail.token0, detail.amount0, detail.token1, detail.amount1
         );
     }
 
@@ -440,7 +428,7 @@ contract CrossSwap is BaseHook {
         view
         returns (
             bytes32 messageId,
-            uint16 sourceChainSelector,
+            uint16 sourceChainId,
             address sender,
             address token0,
             uint256 amount0,
@@ -457,13 +445,7 @@ contract CrossSwap is BaseHook {
         Constants.Message memory detail = messageDetail[messageId];
 
         return (
-            messageId,
-            detail.sourceChainSelector,
-            detail.sender,
-            detail.token0,
-            detail.amount0,
-            detail.token1,
-            detail.amount1
+            messageId, detail.sourceChainId, detail.sender, detail.token0, detail.amount0, detail.token1, detail.amount1
         );
     }
 
@@ -580,7 +562,7 @@ contract CrossSwap is BaseHook {
     function _transferCrossChain(
         address sender,
         address hook,
-        uint16 destinationChainSelector,
+        uint16 destinationChainId,
         PoolKey memory key,
         uint256 amount0,
         uint256 amount1,
@@ -589,11 +571,15 @@ contract CrossSwap is BaseHook {
         bool isSwap,
         bytes memory zkProof
     ) internal {
+        if (zkProof.length == 0) {
+            zkProof = zkVerifier.generateProof(abi.encode(key, amount0, amount1, isSwap));
+        }
+
         IERC20Minimal(Currency.unwrap(key.currency0)).transferFrom(sender, address(this), amount0);
         IERC20Minimal(Currency.unwrap(key.currency1)).transferFrom(sender, address(this), amount1);
 
         Constants.SendMessageParams memory params = Constants.SendMessageParams({
-            destinationChainSelector: destinationChainSelector,
+            destinationChainId: destinationChainId,
             receiver: hook,
             sender: sender,
             token0: Currency.unwrap(key.currency0),
@@ -631,7 +617,6 @@ contract CrossSwap is BaseHook {
         uint256 strategyId,
         uint256[] memory chainIds,
         uint256[] memory liquidityPercentages,
-        uint16[] memory chainSelectors,
         address[] memory hooks
     ) external onlyAuthorizedUser {
         // Check that the strategy ID is not already in use
@@ -651,12 +636,8 @@ contract CrossSwap is BaseHook {
         require(totalLiquidityPercentage == 100, "CrossSwap: Liquidity percentages must sum up to 100");
 
         // Add the new strategy to the contract
-        strategies[poolId][strategyId] = Constants.Strategy({
-            chainIds: chainIds,
-            percentages: liquidityPercentages,
-            chainSelectors: chainSelectors,
-            hooks: hooks
-        });
+        strategies[poolId][strategyId] =
+            Constants.Strategy({chainIds: chainIds, percentages: liquidityPercentages, hooks: hooks});
 
         // Emit the StrategyAdded event
         emit Events.StrategyAdded(poolId, strategyId, chainIds, liquidityPercentages, hooks);
@@ -667,17 +648,12 @@ contract CrossSwap is BaseHook {
         uint256 strategyId,
         uint256[] memory chainIds,
         uint256[] memory liquidityPercentages,
-        uint16[] memory chainSelectors,
         address[] memory hooks
     ) external onlyAuthorizedUser {
         require(strategies[poolId][strategyId].chainIds.length > 0, "CrossSwap: Strategy ID does not exist");
 
-        strategies[poolId][strategyId] = Constants.Strategy({
-            chainIds: chainIds,
-            percentages: liquidityPercentages,
-            chainSelectors: chainSelectors,
-            hooks: hooks
-        });
+        strategies[poolId][strategyId] =
+            Constants.Strategy({chainIds: chainIds, percentages: liquidityPercentages, hooks: hooks});
 
         emit Events.StrategyUpdated(poolId, strategyId);
     }

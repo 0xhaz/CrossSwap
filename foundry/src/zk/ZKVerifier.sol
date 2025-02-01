@@ -20,10 +20,8 @@ contract ZKVerifier {
 
         isValid = proof.length == 32; // Assuming the proof is valid if it's 32 bytes long
 
-        console2.log("Is zkProof valid: %s", isValid);
         return isValid;
     }
-
 
     /**
      * @notice Generates a zkProof for private transaction
@@ -34,9 +32,6 @@ contract ZKVerifier {
         require(data.length > 0, "ZKVerifier: data length must be greater than 0");
 
         proof = abi.encodePacked(keccak256(data));
-
-        console2.log("Generated zkProof: %s");
-        console2.logBytes(proof);
 
         return proof;
     }

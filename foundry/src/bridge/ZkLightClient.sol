@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.26;
 
+import {console2} from "forge-std/Test.sol";
+
 contract ZkLightClient {
     /// @notice Emitted when a cross-chain message is sent
     event MessageSent(uint16 indexed dstChainId, bytes indexed receiver, uint64 nonce, bytes payload);
@@ -27,6 +29,7 @@ contract ZkLightClient {
      */
     function send(uint16 dstChainId, bytes memory receiver, uint64 timestamp, bytes memory payload) external {
         nonceCounter++;
+
         emit MessageSent(dstChainId, receiver, timestamp, payload);
     }
 
@@ -43,6 +46,11 @@ contract ZkLightClient {
         receivedMessages[messageHash] = true;
 
         emit MessageReceived(srcChainId, sender, timestamp, payload);
+
+        (address receiver, bytes memory messageData) = abi.decode(payload, (address, bytes));
+
+        (bool success,) = receiver.call(abi.encodeWithSignature("_zkReceive(uint16,bytes)", srcChainId, messageData));
+        require(success, "ZkLightClient: failed to call receiver");
     }
 
     /**

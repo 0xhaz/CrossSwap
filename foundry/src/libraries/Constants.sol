@@ -28,13 +28,12 @@ library Constants {
     struct Strategy {
         uint256[] chainIds;
         uint256[] percentages;
-        uint16[] chainSelectors;
         address[] hooks;
     }
 
     /// Struct to hold details of a received message
     struct Message {
-        uint16 sourceChainSelector;
+        uint16 sourceChainId;
         address sender;
         address token0;
         uint256 amount0;
@@ -46,25 +45,9 @@ library Constants {
         int24 tickUpper;
     }
 
-    /// Struct to hold details of a received message for a CCIP receiver
-    struct CCIPReceiveParams {
-        address sender;
-        address recipient;
-        uint24 fee;
-        int24 tickSpacing;
-        int24 tickLower;
-        int24 tickUpper;
-        address token0Address;
-        uint256 token0Amount;
-        address token1Address;
-        uint256 token1Amount;
-        bool isSwap;
-        bytes zkProof;
-    }
-
     /// Struct to hold details of message sent to a CCIP receiver
     struct SendMessageParams {
-        uint16 destinationChainSelector;
+        uint16 destinationChainId;
         address receiver;
         address sender;
         address token0;
@@ -108,14 +91,7 @@ library Events {
     /// @dev The token0 amount that was sent
     /// @dev The token1 amount that was sent
     /// @dev The fee amount that was sent
-    event MessageSent(
-        bytes32 indexed messageId,
-        uint16 indexed destinationChainSelector,
-        address receiver,
-        Client.EVMTokenAmount tokenAmount0,
-        Client.EVMTokenAmount tokenAmount1,
-        uint256 fees
-    );
+    event MessageSent(bytes32 indexed messageId, uint16 indexed destinationChainId, address receiver, uint256 fees);
 
     /// @notice Event emitted when a message is received from another chain
     /// @dev The chain selector of the source chain
