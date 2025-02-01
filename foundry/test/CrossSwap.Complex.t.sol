@@ -18,7 +18,8 @@ import {EasyPosm} from "test/utils/EasyPosm.sol";
 import {Fixtures} from "test/utils/Fixtures.sol";
 import {CrossSwap} from "src/CrossSwap.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {GKRVerifier} from "src/zk/GKRVerifier.sol";
+
+import {ZKVerifier} from "src/zk/ZKVerifier.sol";
 
 import {
     CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper
@@ -28,7 +29,7 @@ contract CrossSwapTest is Test, Fixtures {
     CCIPLocalSimulator public ccipLocalSimulator;
     BurnMintERC677Helper public ccipBnMToken;
 
-    GKRVerifier verifier;
+    ZKVerifier zkVerifier;
 
     address public sourceRouterAddress;
     address public destinationRouterAddress;
@@ -61,8 +62,6 @@ contract CrossSwapTest is Test, Fixtures {
     int24 tickLower;
     int24 tickUpper;
 
-    bytes proofData = abi.encodePacked(keccak256("proofData"));
-
     PoolKey key2;
 
     function setUp() public {
@@ -71,11 +70,13 @@ contract CrossSwapTest is Test, Fixtures {
 
         deployAndApprovePosm(manager);
 
-        verifier = new GKRVerifier();
+        zkVerifier = new ZKVerifier();
 
-        address flagsSourceChain = address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x4444 << 144));
+        address flagsSourceChain =
+            address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG) ^ (0x4444 << 144));
 
-        address flagsDestinationChain = address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x8888 << 144));
+        address flagsDestinationChain =
+            address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG) ^ (0x8888 << 144));
 
         ccipLocalSimulator = new CCIPLocalSimulator();
         (
@@ -93,7 +94,7 @@ contract CrossSwapTest is Test, Fixtures {
         destinationRouterAddress = address(destinationRouter);
 
         bytes memory constructorArgs =
-            abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress, verifier);
+            abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress, zkVerifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs, flagsSourceChain);
 
         hookSource = CrossSwap(flagsSourceChain);
@@ -104,11 +105,9 @@ contract CrossSwapTest is Test, Fixtures {
         poolId = key.toId();
         manager.initialize(key, SQRT_PRICE_1_1);
 
-        verifier = new GKRVerifier();
-
         deployFreshManagerAndRouters();
         bytes memory constructorArgs2 =
-            abi.encode(manager, authorizedUser, destinationHookChainId, destinationRouterAddress, verifier);
+            abi.encode(manager, authorizedUser, destinationHookChainId, destinationRouterAddress, zkVerifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs2, flagsDestinationChain);
         hookDestination = CrossSwap(flagsDestinationChain);
         hookAddressDestination = address(hookDestination);
@@ -154,9 +153,9 @@ contract CrossSwapTest is Test, Fixtures {
         console2.log("balance1Before", balance1Before);
 
         bytes memory liquidityData = abi.encode(key, tickLower, tickUpper, 10_000_000);
-        bytes memory proofData = verifier.generateProof(liquidityData);
+        bytes memory proofData = zkVerifier.generateProof(liquidityData);
 
-        bool isValidProof = verifier.verifyProof(proofData);
+        bool isValidProof = zkVerifier.verifyProof(proofData);
         assertTrue(isValidProof, "Proof is not valid");
 
         hookSource.addLiquidityWithCrossChainStrategy(
@@ -188,5 +187,35 @@ contract CrossSwapTest is Test, Fixtures {
 
         assertEq(balance0Before - balance0After, 4_000_000);
         assertEq(balance1Before - balance1After, 4_000_000);
+    }
+
+    function test_ExecuteSwapWithPrivacy() public {
+        IERC20Minimal(Currency.unwrap(key.currency0)).approve(hookAddressSource, 1000 ether);
+        IERC20Minimal(Currency.unwrap(key.currency1)).approve(hookAddressSource, 1000 ether);
+
+        tickLower = TickMath.minUsableTick(key.tickSpacing);
+        tickUpper = TickMath.maxUsableTick(key.tickSpacing);
+
+        uint256 balance0Before = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
+        uint256 balance1Before = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(this));
+
+        IPoolManager.SwapParams memory swapParams =
+            IPoolManager.SwapParams({zeroForOne: true, amountSpecified: 10_000e18, sqrtPriceLimitX96: 0});
+
+        bytes memory swapData = abi.encode(key, swapParams);
+        bytes memory zkProof = zkVerifier.generateProof(swapData);
+
+        bool isValidProof = zkVerifier.verifyProof(zkProof);
+        assertTrue(isValidProof);
+
+        hookSource.executeSwapWithPrivacy(key, swapParams, destinationChainSelector, hookAddressDestination);
+
+        uint256 balance0After = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
+        uint256 balance1After = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(this));
+
+        assertEq(balance0Before - balance0After, 10_000e18);
+        assertGt(balance1After, balance1Before);
+
+        console2.log(unicode"✅ Swap executed successfully");
     }
 }

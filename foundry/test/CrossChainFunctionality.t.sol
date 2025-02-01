@@ -18,7 +18,7 @@ import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol
 import {EasyPosm} from "test/utils/EasyPosm.sol";
 import {Fixtures} from "test/utils/Fixtures.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {GKRVerifier} from "src/zk/GKRVerifier.sol";
+import {ZKVerifier} from "src/zk/ZKVerifier.sol";
 
 import {
     CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper
@@ -30,7 +30,7 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
 
     address public sourceRouterAddress;
     address public destinatioRouterAddress;
-    GKRVerifier verifier;
+    ZKVerifier zkVerifier;
     uint64 public destinationChainSelector;
 
     using EasyPosm for IPositionManager;
@@ -67,15 +67,15 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
 
         deployAndApprovePosm(manager);
 
-        verifier = new GKRVerifier();
+        zkVerifier = new ZKVerifier();
 
         // Deploy the hook to an address with the correct flags
         address flagSourceChain = address(
-            uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x4444 << 144) // Namespace the hook to avoid collisions
+            uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG) ^ (0x4444 << 144) // Namespace the hook to avoid collisions
         );
 
         address flagDestinationChain = address(
-            uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG) ^ (0x8888 << 144) // Namespace the hook to avoid collisions
+            uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG) ^ (0x8888 << 144) // Namespace the hook to avoid collisions
         );
 
         ccipLocalSimulator = new CCIPLocalSimulator();
@@ -96,9 +96,9 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
         destinatioRouterAddress = address(destinationRouter);
 
         bytes memory constructorArgs =
-            abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress, verifier);
+            abi.encode(manager, authorizedUser, sourceHookChainId, sourceRouterAddress, zkVerifier);
         bytes memory constructorArgs2 =
-            abi.encode(manager, authorizedUser, destinationHookChainId, destinatioRouterAddress, verifier);
+            abi.encode(manager, authorizedUser, destinationHookChainId, destinatioRouterAddress, zkVerifier);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs, flagSourceChain);
         deployCodeTo("CrossSwap.sol:CrossSwap", constructorArgs2, flagDestinationChain);
 
@@ -159,7 +159,10 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
             key.fee,
             key.tickSpacing,
             tickLower,
-            tickUpper
+            tickUpper,
+            false,
+            IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
+            ""
         );
 
         uint256 token0BalanceOfSenderAfter = token0.balanceOf(address(hookSource));
@@ -221,7 +224,10 @@ contract CrossChainFunctionalityTest is Test, Fixtures {
             key.fee,
             key.tickSpacing,
             tickLower,
-            tickUpper
+            tickUpper,
+            false,
+            IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
+            ""
         );
 
         uint256 token0BalanceOfSenderAfter = token0.balanceOf(address(hookSource));

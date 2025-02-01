@@ -19,19 +19,22 @@ library Constants {
         IPoolManager.ModifyLiquidityParams params;
         uint256 strategyId;
         bool isCrossChainIncoming;
+        bool isSwap;
+        IPoolManager.SwapParams swapParams;
+        bytes zkProof;
     }
 
     /// Struct representing a liquidity distribution strategy
     struct Strategy {
         uint256[] chainIds;
         uint256[] percentages;
-        uint64[] chainSelectors;
+        uint16[] chainSelectors;
         address[] hooks;
     }
 
     /// Struct to hold details of a received message
     struct Message {
-        uint64 sourceChainSelector;
+        uint16 sourceChainSelector;
         address sender;
         address token0;
         uint256 amount0;
@@ -55,11 +58,13 @@ library Constants {
         uint256 token0Amount;
         address token1Address;
         uint256 token1Amount;
+        bool isSwap;
+        bytes zkProof;
     }
 
     /// Struct to hold details of message sent to a CCIP receiver
     struct SendMessageParams {
-        uint64 destinationChainSelector;
+        uint16 destinationChainSelector;
         address receiver;
         address sender;
         address token0;
@@ -70,6 +75,8 @@ library Constants {
         int24 tickSpacing;
         int24 tickLower;
         int24 tickUpper;
+        bool isSwap;
+        bytes zkProof;
     }
 }
 
@@ -103,7 +110,7 @@ library Events {
     /// @dev The fee amount that was sent
     event MessageSent(
         bytes32 indexed messageId,
-        uint64 indexed destinationChainSelector,
+        uint16 indexed destinationChainSelector,
         address receiver,
         Client.EVMTokenAmount tokenAmount0,
         Client.EVMTokenAmount tokenAmount1,
@@ -116,11 +123,13 @@ library Events {
     /// @dev The message that was received
     /// @dev The token amount that was received
     event MessageReceived(
-        bytes32 indexed messageId,
-        uint64 indexed sourceChainSelector,
+        bytes payload,
+        uint64 srcChainId,
         address sender,
-        Client.EVMTokenAmount tokenAmount0,
-        Client.EVMTokenAmount tokenAmount1
+        address token0,
+        uint256 amount0,
+        address token1,
+        uint256 amount1
     );
 
     /// @notice Event emitted when there is a change in existing strategy

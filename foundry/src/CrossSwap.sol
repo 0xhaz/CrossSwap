@@ -19,16 +19,13 @@ import {FixedPoint96} from "@uniswap/v4-core/src/libraries/FixedPoint96.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
-import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
-import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
-import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
-import {IRouter} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouter.sol";
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 import {Constants, Errors, Events} from "src/libraries/Constants.sol";
-import {GKRVerifier} from "src/zk/GKRVerifier.sol";
+import {ZkLightClient} from "src/bridge/ZkLightClient.sol";
+import {ZKVerifier} from "src/zk/ZKVerifier.sol";
 import {console2} from "forge-std/Test.sol";
 
-contract CrossSwap is CCIPReceiver, BaseHook {
+contract CrossSwap is BaseHook {
     using CurrencyLibrary for Currency;
     using CurrencySettler for Currency;
     using PoolIdLibrary for PoolKey;
@@ -36,7 +33,8 @@ contract CrossSwap is CCIPReceiver, BaseHook {
     using SafeCast for uint128;
     using StateLibrary for IPoolManager;
 
-    GKRVerifier public verifier;
+    ZKVerifier public zkVerifier;
+    ZkLightClient public zkClient;
 
     /*//////////////////////////////////////////////////////////////
                            STORAGE VARIABLES
@@ -59,17 +57,17 @@ contract CrossSwap is CCIPReceiver, BaseHook {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Constructor initializes the contract with the address of the router
-    /// @param router The address of the router contract
     constructor(
         IPoolManager poolManager,
         address authorizedUser,
         uint256 hookChainId,
-        address router,
-        GKRVerifier _verifier
-    ) BaseHook(poolManager) CCIPReceiver(router) {
+        ZKVerifier _zkVerifier,
+        ZkLightClient _zkClient
+    ) BaseHook(poolManager) {
         authorizedUser_ = authorizedUser;
         hookChainId_ = hookChainId;
-        verifier = _verifier;
+        zkVerifier = _zkVerifier;
+        zkClient = _zkClient;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -94,7 +92,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
             afterAddLiquidity: false,
             beforeRemoveLiquidity: false,
             afterRemoveLiquidity: false,
-            beforeSwap: false,
+            beforeSwap: true,
             afterSwap: false,
             beforeDonate: false,
             afterDonate: false,
@@ -136,6 +134,27 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         return this.beforeAddLiquidity.selector;
     }
 
+    /// @notice Hook that is called before swapping tokens in a pool
+    function beforeSwap(address sender, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata data)
+        external
+        view
+        override
+        returns (bytes4, BeforeSwapDelta, uint24)
+    {
+        require(sender == address(this), "CrossSwap: Unauthorized sender");
+
+        bytes memory zkProof;
+        if (data.length > 0) {
+            zkProof = abi.decode(data, (bytes));
+        } else {
+            revert("CrossSwap: Missing ZK proof data");
+        }
+
+        require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid ZK proof");
+
+        return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+    }
+
     /*//////////////////////////////////////////////////////////////
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -146,7 +165,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         uint256 strategyId,
         bytes calldata gkrProof
     ) external returns (BalanceDelta delta) {
-        require(verifier.verifyProof(gkrProof), "CrossSwap: Invalid GKR proof");
+        require(zkVerifier.verifyProof(gkrProof), "CrossSwap: Invalid GKR proof");
 
         delta = abi.decode(
             poolManager.unlock(
@@ -156,11 +175,39 @@ contract CrossSwap is CCIPReceiver, BaseHook {
                         key: key,
                         params: params,
                         strategyId: strategyId,
-                        isCrossChainIncoming: false
+                        isCrossChainIncoming: false,
+                        isSwap: false,
+                        swapParams: IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
+                        zkProof: Constants.ZERO_BYTES
                     })
                 )
             ),
             (BalanceDelta)
+        );
+    }
+
+    function executeSwapWithPrivacy(
+        PoolKey memory key,
+        IPoolManager.SwapParams memory params,
+        uint16 destinationChainSelector,
+        address destinationHook
+    ) external {
+        bytes memory zkProof = zkVerifier.generateProof(abi.encode(key, params));
+
+        require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid ZK proof");
+
+        // transfer tokens cross-chain & execute swap
+        _transferCrossChain(
+            msg.sender,
+            destinationHook,
+            destinationChainSelector,
+            key,
+            uint256(params.amountSpecified),
+            0,
+            0,
+            0,
+            true,
+            zkProof
         );
     }
 
@@ -170,14 +217,25 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         PoolId poolId = key.toId();
         address sender = data.sender;
         bool isCrossChainIncoming = data.isCrossChainIncoming;
-        IPoolManager.ModifyLiquidityParams memory params = data.params;
 
-        Constants.Strategy storage strategy = strategies[poolId][data.strategyId];
         BalanceDelta delta;
 
-        if (isCrossChainIncoming) {
+        if (isCrossChainIncoming && data.isSwap) {
+            console2.log(unicode"🔄 Executing Cross-Chain Swap on Destination Chain");
+
+            require(zkVerifier.verifyProof(data.zkProof), "CrossSwap: Invalid ZK proof");
+
+            delta = poolManager.swap(key, data.swapParams, Constants.ZERO_BYTES);
+
+            console2.log(unicode"✅ Cross-Chain Swap Executed Successfully!");
+
+            _settleDeltas(sender, key, delta);
+
             return abi.encode(delta);
         }
+
+        IPoolManager.ModifyLiquidityParams memory params = data.params;
+        Constants.Strategy storage strategy = strategies[poolId][data.strategyId];
 
         if (data.params.liquidityDelta < 0) {
             (delta,) = poolManager.modifyLiquidity(key, params, Constants.ZERO_BYTES);
@@ -203,7 +261,9 @@ contract CrossSwap is CCIPReceiver, BaseHook {
                         amount0,
                         amount1,
                         params.tickLower,
-                        params.tickUpper
+                        params.tickUpper,
+                        false,
+                        Constants.ZERO_BYTES
                     );
                 }
             }
@@ -218,11 +278,11 @@ contract CrossSwap is CCIPReceiver, BaseHook {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             CCIP FUNCTIONS
+                             CROSS CHAIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     function sendMessage(
-        uint64 destinationChainSelector,
+        uint16 destinationChainSelector,
         address sender,
         address receiver,
         address token0,
@@ -232,7 +292,9 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         uint24 fee,
         int24 tickSpacing,
         int24 tickLower,
-        int24 tickUpper
+        int24 tickUpper,
+        bool isSwap,
+        bytes calldata zkProof
     ) external returns (bytes32 messageId) {
         Constants.SendMessageParams memory params = Constants.SendMessageParams({
             destinationChainSelector: destinationChainSelector,
@@ -245,124 +307,66 @@ contract CrossSwap is CCIPReceiver, BaseHook {
             fee: fee,
             tickSpacing: tickSpacing,
             tickLower: tickLower,
-            tickUpper: tickUpper
+            tickUpper: tickUpper,
+            isSwap: isSwap,
+            zkProof: zkProof
         });
 
         return _sendMessage(params);
     }
 
     function _sendMessage(Constants.SendMessageParams memory params) internal returns (bytes32 messageId) {
-        bytes memory encodeMessage =
-            abi.encode(params.sender, params.fee, params.tickSpacing, params.tickLower, params.tickUpper);
-
-        // Set the token amounts
-        Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](2);
-        tokenAmounts[0] = Client.EVMTokenAmount({token: params.token0, amount: params.amount0});
-        tokenAmounts[1] = Client.EVMTokenAmount({token: params.token1, amount: params.amount1});
-
-        console2.log(unicode"🚀 Preparing to Send Cross-Chain Message!");
-        console2.log("Destination Chain:", params.destinationChainSelector);
-        console2.log("Receiver Hook:", params.receiver);
-        console2.log("Token0:", params.token0, "Amount:", params.amount0);
-        console2.log("Token1:", params.token1, "Amount:", params.amount1);
-
-        // Create an EVM2AnyMessage struct in memory
-        Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
-            receiver: abi.encode(params.receiver),
-            data: encodeMessage,
-            tokenAmounts: tokenAmounts,
-            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 500_000})),
-            feeToken: address(0)
-        });
-
-        // Initialize a router client instance
-        IRouterClient router = IRouterClient(this.getRouter());
-
-        // Approve the Router to spend tokens on contract's behalf
-        IERC20Minimal(params.token0).approve(address(router), params.amount0);
-        IERC20Minimal(params.token1).approve(address(router), params.amount1);
-
-        // Initialize the Router to send the message
-        uint256 fees = router.getFee(params.destinationChainSelector, evm2AnyMessage);
-        console2.log("Required CCIP Fee:", fees);
-
-        // Reverts if this contract does not have enough tokens to pay the fee
-        if (address(this).balance < fees) revert Errors.InsufficientFeeTokenAmount();
-
-        // Send the message through the router and store the returned message ID
-        messageId = router.ccipSend{value: fees}(params.destinationChainSelector, evm2AnyMessage);
-
-        console2.log(unicode"✅ CCIP Message Sent Successfully!");
-        console2.logBytes32(messageId);
-
-        // Emit the MessageSent event
-        emit Events.MessageSent(
-            messageId, params.destinationChainSelector, params.receiver, tokenAmounts[0], tokenAmounts[1], fees
+        bytes memory messageData = abi.encode(
+            params.sender,
+            params.token0,
+            params.amount0,
+            params.token1,
+            params.amount1,
+            params.fee,
+            params.tickSpacing,
+            params.tickLower,
+            params.tickUpper,
+            params.isSwap,
+            params.zkProof
         );
 
-        // Return the message ID
-        return messageId;
+        zkClient.send(
+            params.destinationChainSelector, abi.encodePacked(params.receiver), uint64(block.timestamp), messageData
+        );
+
+        messageId = keccak256(messageData);
     }
 
     /// @notice Function to receive a message from another chain
-    function _ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) internal virtual override {
-        bytes32 messageId = any2EvmMessage.messageId;
-        uint64 sourceChainSelector = any2EvmMessage.sourceChainSelector;
-        address sender = abi.decode(any2EvmMessage.sender, (address));
-        receivedMessages.push(messageId);
+    function _zkReceive(uint16 srcChainId, bytes memory payload) internal {
+        require(msg.sender == address(zkClient), "CrossSwap: Unauthorized sender");
 
-        Constants.CCIPReceiveParams memory params;
-        (params.recipient, params.fee, params.tickSpacing, params.tickLower, params.tickUpper) =
-            abi.decode(any2EvmMessage.data, (address, uint24, int24, int24, int24));
+        Constants.SendMessageParams memory params = abi.decode(payload, (Constants.SendMessageParams));
 
-        Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
-
-        params.token0Address = tokenAmounts[0].token;
-        params.token0Amount = tokenAmounts[0].amount;
-        params.token1Address = tokenAmounts[1].token;
-        params.token1Amount = tokenAmounts[1].amount;
-
-        console2.log(unicode"🔥 Receiving Cross-Chain Liquidity Message!");
-        console2.log("Source Chain:", sourceChainSelector);
-        console2.log("Sender:", sender);
-        console2.log("Received Token0:", params.token0Address, "Amount:", params.token0Amount);
-        console2.log("Received Token1:", params.token1Address, "Amount:", params.token1Amount);
-
-        IERC20Minimal(params.token0Address).approve(address(poolManager), type(uint256).max);
-        IERC20Minimal(params.token1Address).approve(address(poolManager), type(uint256).max);
-
-        PoolKey memory key = PoolKey({
-            currency0: Currency.wrap(params.token0Address),
-            currency1: Currency.wrap(params.token1Address),
-            fee: params.fee,
-            tickSpacing: params.tickSpacing,
-            hooks: IHooks(address(this))
-        });
-
-        PoolId poolId = key.toId();
-        (uint160 currentSqrtPriceX96,,,) = poolManager.getSlot0(poolId);
-
-        console2.log(unicode"✅ Adding Liquidity on Destination Hook!");
-        _processLiquidity(key, params, currentSqrtPriceX96);
-
-        // Refund remaining tokens to recipient
-        _refundRemainingTokens(params);
-
-        //  Emit the MessageReceived event
-        emit Events.MessageReceived(messageId, sourceChainSelector, sender, tokenAmounts[0], tokenAmounts[1]);
-
-        messageDetail[messageId] = Constants.Message({
-            sourceChainSelector: sourceChainSelector,
-            sender: sender,
-            token0: params.token0Address,
-            amount0: params.token0Amount,
-            token1: params.token1Address,
-            amount1: params.token1Amount,
+        Constants.Message memory receivedMessage = Constants.Message({
+            sourceChainSelector: srcChainId,
+            sender: params.sender,
+            token0: params.token0,
+            amount0: params.amount0,
+            token1: params.token1,
+            amount1: params.amount1,
             fee: params.fee,
             tickSpacing: params.tickSpacing,
             tickLower: params.tickLower,
             tickUpper: params.tickUpper
         });
+
+        require(zkVerifier.verifyProof(params.zkProof), "CrossSwap: Invalid ZK proof");
+
+        if (params.isSwap) {
+            _executeSwapWithPrivacy(receivedMessage, params.zkProof);
+        } else {
+            _processLiquidity(receivedMessage);
+        }
+
+        emit Events.MessageReceived(
+            payload, srcChainId, params.sender, params.token0, params.amount0, params.token1, params.amount1
+        );
     }
 
     /// @notice Get the total number of received messages
@@ -375,7 +379,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         external
         view
         returns (
-            uint64 sourceChainSelector,
+            uint16 sourceChainSelector,
             address sender,
             address token0,
             uint256 amount0,
@@ -408,7 +412,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         view
         returns (
             bytes32 messageId,
-            uint64 sourceChainSelector,
+            uint16 sourceChainSelector,
             address sender,
             address token0,
             uint256 amount0,
@@ -436,7 +440,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         view
         returns (
             bytes32 messageId,
-            uint64 sourceChainSelector,
+            uint16 sourceChainSelector,
             address sender,
             address token0,
             uint256 amount0,
@@ -467,27 +471,29 @@ contract CrossSwap is CCIPReceiver, BaseHook {
                             HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _processLiquidity(
-        PoolKey memory key,
-        Constants.CCIPReceiveParams memory params,
-        uint160 currentSqrtPriceX96
-    ) private {
-        uint160 lowerSqrtPriceX96 = TickMath.getSqrtPriceAtTick(params.tickLower);
-        uint160 upperSqrtPriceX96 = TickMath.getSqrtPriceAtTick(params.tickUpper);
+    function _processLiquidity(Constants.Message memory receivedMessage) private {
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(receivedMessage.token0),
+            currency1: Currency.wrap(receivedMessage.token1),
+            fee: receivedMessage.fee,
+            tickSpacing: receivedMessage.tickSpacing,
+            hooks: IHooks(address(this))
+        });
+
+        PoolId poolId = key.toId();
+        (uint160 currentSqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+
+        uint160 lowerSqrtPriceX96 = TickMath.getSqrtPriceAtTick(receivedMessage.tickLower);
+        uint160 upperSqrtPriceX96 = TickMath.getSqrtPriceAtTick(receivedMessage.tickUpper);
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            currentSqrtPriceX96, lowerSqrtPriceX96, upperSqrtPriceX96, params.token0Amount, params.token1Amount
+            currentSqrtPriceX96, lowerSqrtPriceX96, upperSqrtPriceX96, receivedMessage.amount0, receivedMessage.amount1
         );
-
-        console2.log(unicode"🌊 Adding Liquidity to Pool on Destination Chain");
-        console2.log("Liquidity:", liquidity);
-        console2.log("Token0 Amount:", params.token0Amount);
-        console2.log("Token1 Amount:", params.token1Amount);
 
         IPoolManager.ModifyLiquidityParams memory modifyParams = IPoolManager.ModifyLiquidityParams({
             liquidityDelta: int256(uint256(liquidity)),
-            tickLower: params.tickLower,
-            tickUpper: params.tickUpper,
+            tickLower: receivedMessage.tickLower,
+            tickUpper: receivedMessage.tickUpper,
             salt: bytes32(0)
         });
 
@@ -499,26 +505,29 @@ contract CrossSwap is CCIPReceiver, BaseHook {
                         key: key,
                         params: modifyParams,
                         strategyId: 1,
-                        isCrossChainIncoming: true
+                        isCrossChainIncoming: true,
+                        isSwap: false,
+                        swapParams: IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
+                        zkProof: Constants.ZERO_BYTES
                     })
                 )
             ),
             (BalanceDelta)
         );
 
-        console2.log(unicode"✅ Liquidity Successfully Added to Destination Pool!");
+        receivedMessage.amount0 -= uint256(uint128(delta.amount0()));
+        receivedMessage.amount1 -= uint256(uint128(delta.amount1()));
 
-        params.token0Amount -= uint256(uint128(delta.amount0()));
-        params.token1Amount -= uint256(uint128(delta.amount1()));
+        _refundRemainingTokens(receivedMessage);
     }
 
-    function _refundRemainingTokens(Constants.CCIPReceiveParams memory params) private {
-        if (params.token0Amount > 0) {
-            IERC20Minimal(params.token0Address).transfer(params.recipient, params.token0Amount);
+    function _refundRemainingTokens(Constants.Message memory params) private {
+        if (params.amount0 > 0) {
+            IERC20Minimal(params.token0).transfer(params.sender, params.amount0);
         }
 
-        if (params.token1Amount > 0) {
-            IERC20Minimal(params.token1Address).transfer(params.recipient, params.token1Amount);
+        if (params.amount1 > 0) {
+            IERC20Minimal(params.token1).transfer(params.sender, params.amount1);
         }
     }
 
@@ -571,23 +580,20 @@ contract CrossSwap is CCIPReceiver, BaseHook {
     function _transferCrossChain(
         address sender,
         address hook,
-        uint64 destinationChainSelector,
+        uint16 destinationChainSelector,
         PoolKey memory key,
         uint256 amount0,
         uint256 amount1,
         int24 tickLower,
-        int24 tickUpper
+        int24 tickUpper,
+        bool isSwap,
+        bytes memory zkProof
     ) internal {
-        console2.log(unicode"🚀 Sending Cross-Chain Liquidity!");
-        console2.log("Receiver Hook:", hook);
-        console2.log("Token0:", Currency.unwrap(key.currency0), "Amount:", amount0);
-        console2.log("Token1:", Currency.unwrap(key.currency1), "Amount:", amount1);
-
         IERC20Minimal(Currency.unwrap(key.currency0)).transferFrom(sender, address(this), amount0);
         IERC20Minimal(Currency.unwrap(key.currency1)).transferFrom(sender, address(this), amount1);
 
         Constants.SendMessageParams memory params = Constants.SendMessageParams({
-            destinationChainSelector: uint64(destinationChainSelector),
+            destinationChainSelector: destinationChainSelector,
             receiver: hook,
             sender: sender,
             token0: Currency.unwrap(key.currency0),
@@ -597,7 +603,9 @@ contract CrossSwap is CCIPReceiver, BaseHook {
             fee: key.fee,
             tickSpacing: key.tickSpacing,
             tickLower: tickLower,
-            tickUpper: tickUpper
+            tickUpper: tickUpper,
+            isSwap: isSwap,
+            zkProof: zkProof
         });
 
         _sendMessage(params);
@@ -623,7 +631,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         uint256 strategyId,
         uint256[] memory chainIds,
         uint256[] memory liquidityPercentages,
-        uint64[] memory chainSelectors,
+        uint16[] memory chainSelectors,
         address[] memory hooks
     ) external onlyAuthorizedUser {
         // Check that the strategy ID is not already in use
@@ -659,7 +667,7 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         uint256 strategyId,
         uint256[] memory chainIds,
         uint256[] memory liquidityPercentages,
-        uint64[] memory chainSelectors,
+        uint16[] memory chainSelectors,
         address[] memory hooks
     ) external onlyAuthorizedUser {
         require(strategies[poolId][strategyId].chainIds.length > 0, "CrossSwap: Strategy ID does not exist");
@@ -678,5 +686,43 @@ contract CrossSwap is CCIPReceiver, BaseHook {
         require(strategies[poolId][strategyId].chainIds.length > 0, "CrossSwap: Strategy ID does not exist");
         delete strategies[poolId][strategyId];
         emit Events.StrategyRemoved(poolId, strategyId);
+    }
+
+    function _executeSwapWithPrivacy(Constants.Message memory receivedMessage, bytes memory zkProof) internal {
+        require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid ZK proof");
+
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(receivedMessage.token0),
+            currency1: Currency.wrap(receivedMessage.token1),
+            fee: receivedMessage.fee,
+            tickSpacing: receivedMessage.tickSpacing,
+            hooks: IHooks(address(this))
+        });
+
+        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
+            zeroForOne: receivedMessage.amount0 > 0,
+            amountSpecified: int256(receivedMessage.amount0 > 0 ? receivedMessage.amount0 : receivedMessage.amount1),
+            sqrtPriceLimitX96: 0
+        });
+
+        BalanceDelta swapDelta = abi.decode(
+            poolManager.unlock(
+                abi.encode(
+                    Constants.CallbackData({
+                        sender: msg.sender,
+                        key: key,
+                        params: IPoolManager.ModifyLiquidityParams(0, 0, 0, bytes32(0)),
+                        strategyId: 0,
+                        isCrossChainIncoming: true,
+                        isSwap: true,
+                        swapParams: swapParams,
+                        zkProof: zkProof
+                    })
+                )
+            ),
+            (BalanceDelta)
+        );
+
+        _settleDeltas(msg.sender, key, swapDelta);
     }
 }
