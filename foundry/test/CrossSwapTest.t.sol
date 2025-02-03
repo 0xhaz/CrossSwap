@@ -18,12 +18,16 @@ import {EasyPosm} from "test/utils/EasyPosm.sol";
 import {Fixtures} from "test/utils/Fixtures.sol";
 import {CrossSwap} from "src/CrossSwap.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {ZkLightClient} from "src/bridge/ZkLightClient.sol";
+// import {ZkLightClient} from "src/bridge/ZkLightClient.sol";
+import {MockZkLightClient} from "test/mocks/MockZkLightClient.sol";
 import {ZKVerifier} from "src/zk/ZKVerifier.sol";
+import {Constants} from "src/libraries/Constants.sol";
 
 contract CrossSwapTest is Test, Fixtures {
-    ZkLightClient public zkLightClient;
+    MockZkLightClient public zkLightClient;
     ZKVerifier zkVerifier;
+
+    event CrossChainLiquidityReceived(uint16 indexed srcChainId, bytes message);
 
     uint16 public destinationChainSelector;
 
@@ -60,7 +64,7 @@ contract CrossSwapTest is Test, Fixtures {
         deployAndApprovePosm(manager);
 
         zkVerifier = new ZKVerifier();
-        zkLightClient = new ZkLightClient();
+        zkLightClient = new MockZkLightClient();
 
         address flagsSourceChain =
             address(uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG) ^ (0x4444 << 144));
@@ -107,6 +111,8 @@ contract CrossSwapTest is Test, Fixtures {
 
         vm.prank(authorizedUser);
         hookSource.addStrategy(poolId, 1, chainIds, percentages, hooks);
+        hookDestination.setZkClient(address(zkLightClient));
+        console2.log(unicode"✅ zkClient set to:", address(hookDestination.zkClient()));
     }
 
     function test_CantAddLiquidity() public {
@@ -157,14 +163,13 @@ contract CrossSwapTest is Test, Fixtures {
         uint256 balance0After = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
         uint256 balance1After = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(this));
 
-        console2.log("Actual deduction token0:", balance0Before - balance0After);
-        console2.log("Actual deduction token1:", balance1Before - balance1After);
-
         assertApproxEqAbs(balance0Before, balance0After, 10_000_000);
         assertApproxEqAbs(balance1Before, balance1After, 10_000_000);
     }
 
     function test_AddLiquidityToCrossChainStrategy() public {
+        address receiver = address(hookDestination);
+
         deal(address(hookAddressSource), 1 ether);
         deal(address(hookDestination), 1 ether);
 
@@ -177,11 +182,40 @@ contract CrossSwapTest is Test, Fixtures {
         uint256 balance0Before = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
         uint256 balance1Before = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(this));
 
+        console2.log("Balance token0 before:", balance0Before);
+        console2.log("Balance token1 before:", balance1Before);
+
         bytes memory liquidityData = abi.encode(key, tickLower, tickUpper, 10_000_000);
         bytes memory proofData = zkVerifier.generateProof(liquidityData);
 
         bool isValidProof = zkVerifier.verifyProof(proofData);
-        assertTrue(isValidProof, "Proof is not valid");
+        console2.log(unicode"🔍 zkVerifier.verifyProof result:", isValidProof);
+        require(isValidProof, "CrossSwap: Invalid ZK proof");
+
+        Constants.SendMessageParams memory testParams = Constants.SendMessageParams({
+            destinationChainId: sourceHookChainId,
+            receiver: receiver,
+            sender: address(this),
+            token0: address(0x1234),
+            amount0: 100,
+            token1: address(0x5678),
+            amount1: 200,
+            fee: 3000,
+            tickSpacing: 60,
+            tickLower: -887220,
+            tickUpper: 887220,
+            isSwap: false,
+            zkProof: proofData
+        });
+
+        bytes memory messagePayload = abi.encode(testParams);
+
+        console2.log("Simulating cross-chain liquidity transfer");
+
+        zkLightClient.mockReceiveMessage(receiver, sourceHookChainId, messagePayload);
+
+        vm.expectEmit(true, true, true, true);
+        emit CrossChainLiquidityReceived(sourceHookChainId, messagePayload);
 
         hookSource.addLiquidityWithCrossChainStrategy(
             key, IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 10_000_000, bytes32(0)), 1, proofData
@@ -189,6 +223,12 @@ contract CrossSwapTest is Test, Fixtures {
 
         uint256 balance0After = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(this));
         uint256 balance1After = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(this));
+
+        console2.log("Actual deduction token0:", balance0Before - balance0After);
+        console2.log("Actual deduction token1:", balance1Before - balance1After);
+
+        console2.log("Balance token0 after:", balance0After);
+        console2.log("Balance token1 after:", balance1After);
 
         // uint256 balance0AfterManager = IERC20Minimal(Currency.unwrap(key.currency0)).balanceOf(address(manager));
         // uint256 balance1AfterManager = IERC20Minimal(Currency.unwrap(key.currency1)).balanceOf(address(manager));

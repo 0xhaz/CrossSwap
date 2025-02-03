@@ -49,7 +49,7 @@ contract ZkLightClient {
 
         (address receiver, bytes memory messageData) = abi.decode(payload, (address, bytes));
 
-        (bool success,) = receiver.call(abi.encodeWithSignature("_zkReceive(uint16,bytes)", srcChainId, messageData));
+        (bool success,) = receiver.call(abi.encodeWithSignature("zkReceive(uint16,bytes)", srcChainId, messageData));
         require(success, "ZkLightClient: failed to call receiver");
     }
 
