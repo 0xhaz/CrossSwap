@@ -1,10 +1,7 @@
 #[cfg(test)]
 mod tests {
     use circuit_std_rs::poseidon_m31::*;
-    use crate::liquidity_proof::{generate_liquidity_proof, verify_liquidity_proof};
-    use expander_transcript::Proof;
     use expander_compiler::circuit::config::{BN254Config, Config};
-    use std::collections::HashMap;
     use crate::liquidity_backend::LiquidityBackend;
     use expander_compiler::frontend::{API, BasicAPI};
 

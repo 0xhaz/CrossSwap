@@ -11,6 +11,10 @@ path = "src/lib.rs"
 name = "circuit"
 path = "src/main.rs"
 
+[[bin]]
+name = "liquidity_proof"
+path = "src/liquidity_proof.rs"
+
 [dependencies]
 ark-std = "0.3"
 ark-crypto-primitives = "0.3"
@@ -26,6 +30,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tiny-keccak = "2.0.2"
 bincode = "1.3.3"
+hex = "0.4.3"
+num-bigint = "0.4"
+num-traits = { version = "0.2", features = ["std"] }
 expander_compiler = { git = "https://github.com/PolyhedraZK/ExpanderCompilerCollection", branch = "dev" }
 arith = { git = "https://github.com/PolyhedraZK/Expander", branch = "dev" }
 mpi_config = { git = "https://github.com/PolyhedraZK/Expander", branch = "dev" }
@@ -38,3 +45,6 @@ mersenne31 = { git = "https://github.com/PolyhedraZK/Expander", branch = "dev" }
 expander_transcript = { git = "https://github.com/PolyhedraZK/Expander", branch = "dev", package = "transcript" }
 crosslayer_prototype = { git = "https://github.com/PolyhedraZK/Expander", branch = "dev"}
 circuit-std-rs = { git = "https://github.com/PolyhedraZK/ExpanderCompilerCollection", branch = "dev"}
+halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
+    "bits",
+] }

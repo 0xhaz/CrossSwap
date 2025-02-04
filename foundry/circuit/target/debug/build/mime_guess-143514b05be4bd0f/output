@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/debug/build/mime_guess-143514b05be4bd0f/out/mime_types_generated.rs

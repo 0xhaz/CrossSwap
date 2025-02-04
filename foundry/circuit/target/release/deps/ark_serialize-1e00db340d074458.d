@@ -1,0 +1,11 @@
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/release/deps/libark_serialize-1e00db340d074458.rmeta: /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/lib.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/error.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/flags.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/impls.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/../README.md
+
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/release/deps/libark_serialize-1e00db340d074458.rlib: /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/lib.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/error.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/flags.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/impls.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/../README.md
+
+/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuit/target/release/deps/ark_serialize-1e00db340d074458.d: /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/lib.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/error.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/flags.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/impls.rs /Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/../README.md
+
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/lib.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/error.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/flags.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/impls.rs:
+/Users/haz/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ark-serialize-0.5.0/src/../README.md:

@@ -8,6 +8,7 @@ import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.s
 
 library Constants {
     bytes internal constant ZERO_BYTES = bytes("");
+    uint256 internal constant TREE_DEPTH = 32;
 
     /// @notice Data passed during unlocking liquidity callback, includes sender and key info
     /// @param sender Address of the sender initiating the callback

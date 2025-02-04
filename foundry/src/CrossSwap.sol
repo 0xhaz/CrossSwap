@@ -23,6 +23,8 @@ import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol
 import {Constants, Errors, Events} from "src/libraries/Constants.sol";
 import {ZkLightClient} from "src/bridge/ZkLightClient.sol";
 import {ZKVerifier} from "src/zk/ZKVerifier.sol";
+import {PoseidonHasherLibrary} from "src/libraries/PoseidonHasherLib.sol";
+import {SharedLiquidityLedger, MerkleTree} from "src/zk/SharedLiquidityLedger.sol";
 import {console2} from "forge-std/Test.sol";
 
 contract CrossSwap is BaseHook {
@@ -35,10 +37,14 @@ contract CrossSwap is BaseHook {
 
     ZKVerifier public zkVerifier;
     ZkLightClient public zkClient;
+    SharedLiquidityLedger public sharedLiquidityLedger;
+    MerkleTree public stateTree;
 
     /*//////////////////////////////////////////////////////////////
                            STORAGE VARIABLES
     //////////////////////////////////////////////////////////////*/
+
+    uint256 public constant TREE_DEPTH = 32;
 
     bytes32[] public receivedMessages; // Array to keep track of the IDs of the received messages
     mapping(bytes32 => Constants.Message) public messageDetail; // Mapping to keep track of the details of the received messages
@@ -62,12 +68,14 @@ contract CrossSwap is BaseHook {
         address authorizedUser,
         uint256 hookChainId,
         ZKVerifier _zkVerifier,
-        ZkLightClient _zkClient
+        ZkLightClient _zkClient,
+        address _sharedLiquidityLedger
     ) BaseHook(poolManager) {
         authorizedUser_ = authorizedUser;
         hookChainId_ = hookChainId;
         zkVerifier = _zkVerifier;
         zkClient = _zkClient;
+        sharedLiquidityLedger = SharedLiquidityLedger(_sharedLiquidityLedger);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -131,6 +139,12 @@ contract CrossSwap is BaseHook {
         bytes calldata
     ) external view override returns (bytes4) {
         require(sender == address(this), "CrossSwap: Unauthorized sender");
+
+        // Fetch latest liquidity proof from SharedLiquidityLedger
+        bytes memory latestProof = sharedLiquidityLedger.getLatestLiquidityProof(hookChainId_);
+
+        require(zkVerifier.verifyProof(latestProof), "CrossSwap: Invalid liquidity proof");
+
         return this.beforeAddLiquidity.selector;
     }
 
@@ -163,9 +177,15 @@ contract CrossSwap is BaseHook {
         PoolKey memory key,
         IPoolManager.ModifyLiquidityParams memory params,
         uint256 strategyId,
+        uint256 chainId,
         bytes calldata zkProof
     ) external returns (BalanceDelta delta) {
-        require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid GKR proof");
+        bytes32 latestStateRoot = sharedLiquidityLedger.getLatestLiquidityState(chainId);
+
+        require(sharedLiquidityLedger.zkVerifier().verifyProof(zkProof), "CrossSwap: Invalid ZK proof");
+
+        bytes32 expectedMerkleRoot = stateTree.getMerkleRoot();
+        require(latestStateRoot == expectedMerkleRoot, "CrossSwap: Invalid state root");
 
         delta = abi.decode(
             poolManager.unlock(
@@ -291,6 +311,19 @@ contract CrossSwap is BaseHook {
         bytes memory zkProof
     ) internal returns (BalanceDelta delta) {
         (uint256 amount0, uint256 amount1) = _calculateTokenAmounts(params, liquidity, sqrtPriceX96);
+
+        // Generate new liquidity state root
+        bytes32 newStateRoot = PoseidonHasherLibrary.hashSingle(bytes32(amount0), bytes32(amount1));
+
+        // Insert into Merkle Tree before updating SharedLiquidityLedger
+        stateTree.insert(newStateRoot);
+
+        // Ensure Merkle proof is valid before updating state
+        bytes32[TREE_DEPTH] memory proof = stateTree.getMerkleProof(hookChainId_);
+        require(stateTree.verifyProof(newStateRoot, proof, stateTree.getMerkleRoot()), "CrossSwap: Invalid state root");
+
+        // Store liquidity state in SharedLiquidityLedger
+        sharedLiquidityLedger.updateLiquidityState(hookChainId_, newStateRoot, zkProof);
 
         _transferCrossChain(
             msg.sender,
@@ -768,6 +801,13 @@ contract CrossSwap is BaseHook {
 
     function _executeSwapWithPrivacy(Constants.Message memory receivedMessage, bytes memory zkProof) internal {
         require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid ZK proof");
+
+        bytes32 latestStateRoot = sharedLiquidityLedger.getLatestLiquidityState(receivedMessage.sourceChainId);
+        bytes32[TREE_DEPTH] memory proof = stateTree.getMerkleProof(receivedMessage.sourceChainId);
+
+        // require(
+        //     stateTree.verifyProof(latestStateRoot, proof.stateTree.getMerkleRoot()), "CrossSwap: Invalid state root"
+        // );
 
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(receivedMessage.token0),

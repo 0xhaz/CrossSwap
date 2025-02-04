@@ -1,4 +1,4 @@
-use expander_compiler::frontend::{API, Variable, BasicAPI};
+use expander_compiler::frontend::{API,  BasicAPI};
 use circuit_std_rs::poseidon_m31::*;
 use crate::liquidity_proof::{generate_liquidity_proof, verify_liquidity_proof};
 use expander_transcript::Proof;
@@ -40,10 +40,7 @@ impl LiquidityBackend {
         let poseidon_params = PoseidonM31Params::new(&mut poseidon_api, 8, 16, 8, 14);
         let previous_var = poseidon_api.constant(previous_state_root);
         let new_var = poseidon_api.constant(new_liquidity_state);
-        let new_state_root_var = poseidon_params.hash_to_state(
-            &mut poseidon_api, 
-            &[previous_var, new_var]
-        )[0];
+        
        // Now perform the hash operation
         let new_state_root_var = poseidon_params.hash_to_state(
             &mut poseidon_api, 

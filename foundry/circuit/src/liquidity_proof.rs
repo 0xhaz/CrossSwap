@@ -3,6 +3,31 @@ use expander_compiler::frontend::{API, Variable, BasicAPI};
 use circuit_std_rs::poseidon_m31::*;
 use expander_compiler::circuit::config::Config;
 use tiny_keccak::{Hasher, Keccak};
+use expander_compiler::frontend::BN254Config;
+
+
+fn main() {
+    println!("🚀 Running liquidity_proof...");
+    generate_test_hashes::<BN254Config>();
+}
+
+/// Generates and prints Poseidon hash-based test hashes for Solidity verification
+pub fn generate_test_hashes<C: Config>() {
+    let mut poseidon_api = API::<C>::new(16, 1).0;
+    let poseidon_params = PoseidonM31Params::new(&mut poseidon_api, 8, 16, 8, 14);
+
+    let previous_state_root = C::CircuitField::from(123456u32);
+    let new_state_root = C::CircuitField::from(7891011u32);
+
+    let poseidon_hash = generate_poseidon_commitment::<C>(
+        &mut poseidon_api,
+        &poseidon_params,
+        previous_state_root,
+        new_state_root,
+    );
+
+    println!("🔹 Generated Poseidon Hash (Solidity Compatible): 0x{}", hex::encode(poseidon_hash));
+}
 
 /// Converts a circuit field to a **fixed 32-byte array** representation.
 fn circuit_field_to_bytes<C: Config>(field: &C::CircuitField) -> [u8; 32] {
