@@ -1,0 +1,13 @@
+{
+  "deposited_amount": "100",
+  "received_amount": "100",
+  "user_address": "123456789",
+  "proof_a_x": "12345",
+  "proof_a_y": "67890",
+  "proof_b_x1": "11111",
+  "proof_b_x2": "22222",
+  "proof_b_y1": "33333",
+  "proof_b_y2": "44444",
+  "proof_c_x": "55555",
+  "proof_c_y": "66666"
+}

@@ -1,0 +1,5 @@
+foundry/cache
+foundry/circom/node_modules
+foundry/circuits/target
+frontend/node_modules
+foundry/lib
