@@ -11,18 +11,11 @@ library Constants {
     uint256 internal constant TREE_DEPTH = 32;
 
     /// @notice Data passed during unlocking liquidity callback, includes sender and key info
-    /// @param sender Address of the sender initiating the callback
-    /// @param key The pool key associated with the liquidity position
-    /// @param params Parameters for modifying the liquidity position
     struct CallbackData {
         address sender;
         PoolKey key;
-        IPoolManager.ModifyLiquidityParams params;
+        bytes params;
         uint256 strategyId;
-        bool isCrossChainIncoming;
-        bool isSwap;
-        IPoolManager.SwapParams swapParams;
-        bytes zkProof;
     }
 
     /// Struct representing a liquidity distribution strategy
@@ -32,31 +25,37 @@ library Constants {
         address[] hooks;
     }
 
-    /// Struct to hold details of a received message
-    struct Message {
-        uint16 sourceChainId;
-        address sender;
-        address token0;
-        uint256 amount0;
-        address token1;
-        uint256 amount1;
-        uint24 fee;
-        int24 tickSpacing;
-        int24 tickLower;
-        int24 tickUpper;
+    /// Struct holding zk-SNARK proof data
+    struct ZkProofData {
+        uint256[2] proofA;
+        uint256[2][2] proofB;
+        uint256[2] proofC;
+        uint256[] publicSignals;
     }
 
-    /// Struct to hold details of message sent to a CCIP receiver
-    struct SendMessageParams {
+    /// Unified struct for liquidity execution (both swaps & adding liquidity)
+    struct LiquidityParams {
+        PoolKey key;
+        IPoolManager.ModifyLiquidityParams params;
+        IPoolManager.SwapParams swapParams;
         uint16 destinationChainId;
-        address receiver;
+        address destinationHook;
+        uint256 liquidity;
+        uint160 sqrtPriceX96;
+        ZkProofData zkProof;
+        bool isSwap;
+        bool isCrossChain;
+    }
+
+    /// Struct for cross-chain transfers and messages (combined from two previous structs)
+    struct CrossChainParams {
+        uint16 sourceChainId;
+        uint16 destinationChainId;
         address sender;
-        address token0;
+        address destinationHook;
+        PoolKey key;
         uint256 amount0;
-        address token1;
         uint256 amount1;
-        uint24 fee;
-        int24 tickSpacing;
         int24 tickLower;
         int24 tickUpper;
         bool isSwap;
@@ -118,4 +117,9 @@ library Events {
     /// @dev The poolId of the pool
     /// @dev The strategyId of the strategy
     event StrategyRemoved(PoolId poolId, uint256 strategyId);
+
+    /// @notice Event emitted when a new state root is updated
+    event MerkleRootUpdated(bytes32 newStateRoot);
+
+    event MerkleRootValidated(bytes32 merkleRoot);
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.26;
 
-import {console2} from "forge-std/Console2.sol";
 import {PoseidonHasher} from "src/libraries/PoseidonHasher.sol";
+import {console2} from "forge-std/Console2.sol";
 
 /// @title Poseidon Hasher Library
 /// @notice Provides Poseidon hash functions optimized for zkSNARKs
@@ -12,18 +12,21 @@ library PoseidonHasherLibrary {
     /// @notice Poseidon hash function for two inputs
     function hashSingle(bytes32 left, bytes32 right) internal pure returns (bytes32) {
         uint256[2] memory inputs = [uint256(left), uint256(right)];
-        return bytes32(PoseidonHasher.hash(inputs));
+        bytes32 hash = bytes32(PoseidonHasher.hash(inputs));
+
+        // console2.log("Poseidon Hash:");
+        // console2.logBytes32(hash);
+        return hash;
     }
 
-    /// @notice Hashes an array of values using iterative Poseidon hashing
-    function hashMultiple(bytes32[] memory values) internal pure returns (bytes32) {
-        require(values.length > 0, "PoseidonHasher: values length must be greater than 0");
+    /// @notice Reverse bytes for correct endianness
+    function reverseBytes(bytes32 input) internal pure returns (bytes32) {
+        uint256 x = uint256(input);
+        uint256 output;
 
-        bytes32 rollingHash = values[0];
-        for (uint256 i = 1; i < values.length; i++) {
-            rollingHash = hashSingle(rollingHash, values[i]);
+        for (uint256 i = 0; i < 32; i++) {
+            output |= ((x >> (i * 8)) & 0xFF) << ((31 - i) * 8);
         }
-
-        return rollingHash;
+        return bytes32(output);
     }
 }

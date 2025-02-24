@@ -1,10 +1,14 @@
 pub mod circuit;
 pub mod proof;
-pub mod shared_liquidity;
-pub mod liquidity_proof;
-pub mod liquidity_backend;
+pub mod liquidity_circuit;
+pub mod cross_chain_circuit;
+
+
+
 
 #[cfg(test)]
 mod tests {
-    mod liquidity_tests;  // Import tests
+    mod cross_chain_root_tests;
+    mod gkr_tests;
+    mod cross_chain_tests;
 }

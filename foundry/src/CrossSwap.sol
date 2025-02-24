@@ -10,7 +10,7 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {CurrencyLibrary, Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {CurrencySettler} from "@uniswap/v4-core/test/utils/CurrencySettler.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
-import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {BalanceDelta, BalanceDeltaLibrary} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {IERC20Minimal} from "@uniswap/v4-core/src/interfaces/external/IERC20Minimal.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -21,13 +21,14 @@ import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockC
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 import {Constants, Errors, Events} from "src/libraries/Constants.sol";
-import {ZkLightClient} from "src/bridge/ZkLightClient.sol";
-import {ZKVerifier} from "src/zk/ZKVerifier.sol";
+import {IZkLightClient} from "src/interfaces/IZKLightClient.sol";
+import {IZKVerifier} from "src/interfaces/IZKVerifier.sol";
 import {PoseidonHasherLibrary} from "src/libraries/PoseidonHasherLib.sol";
-import {SharedLiquidityLedger, MerkleTree} from "src/zk/SharedLiquidityLedger.sol";
+import {ISharedLiquidityLedger} from "src/interfaces/ISharedLiquidityLedger.sol";
+import {IMerkleTree} from "src/interfaces/IMerkleTree.sol";
 import {console2} from "forge-std/Test.sol";
 
-contract CrossSwap is BaseHook {
+contract CrossSwap is BaseHook, IZkLightClient, ISharedLiquidityLedger {
     using CurrencyLibrary for Currency;
     using CurrencySettler for Currency;
     using PoolIdLibrary for PoolKey;
@@ -35,19 +36,14 @@ contract CrossSwap is BaseHook {
     using SafeCast for uint128;
     using StateLibrary for IPoolManager;
 
-    ZKVerifier public zkVerifier;
-    ZkLightClient public zkClient;
-    SharedLiquidityLedger public sharedLiquidityLedger;
-    MerkleTree public stateTree;
+    IZkLightClient public zkClient;
+    ISharedLiquidityLedger public sharedLiquidityLedger;
 
     /*//////////////////////////////////////////////////////////////
                            STORAGE VARIABLES
     //////////////////////////////////////////////////////////////*/
 
     uint256 public constant TREE_DEPTH = 32;
-
-    bytes32[] public receivedMessages; // Array to keep track of the IDs of the received messages
-    mapping(bytes32 => Constants.Message) public messageDetail; // Mapping to keep track of the details of the received messages
 
     // Authorized user
     address public authorizedUser_;
@@ -57,6 +53,8 @@ contract CrossSwap is BaseHook {
 
     // Mapping of strategy IDs to their respective liquidity distribution strategies
     mapping(PoolId => mapping(uint256 => Constants.Strategy)) internal strategies;
+    // Mapping to keep track of the details of the received messages
+    mapping(bytes32 => Constants.CrossChainParams) public messageDetail;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -67,14 +65,12 @@ contract CrossSwap is BaseHook {
         IPoolManager poolManager,
         address authorizedUser,
         uint256 hookChainId,
-        ZKVerifier _zkVerifier,
-        ZkLightClient _zkClient,
+        address _zkClient,
         address _sharedLiquidityLedger
     ) BaseHook(poolManager) {
         authorizedUser_ = authorizedUser;
         hookChainId_ = hookChainId;
-        zkVerifier = _zkVerifier;
-        zkClient = _zkClient;
+        zkClient = IZkLightClient(_zkClient);
         sharedLiquidityLedger = SharedLiquidityLedger(_sharedLiquidityLedger);
     }
 
@@ -97,11 +93,11 @@ contract CrossSwap is BaseHook {
             beforeInitialize: false,
             afterInitialize: false,
             beforeAddLiquidity: true,
-            afterAddLiquidity: false,
-            beforeRemoveLiquidity: false,
-            afterRemoveLiquidity: false,
+            afterAddLiquidity: true,
+            beforeRemoveLiquidity: true,
+            afterRemoveLiquidity: true,
             beforeSwap: true,
-            afterSwap: false,
+            afterSwap: true,
             beforeDonate: false,
             afterDonate: false,
             beforeSwapReturnDelta: false,
@@ -134,11 +130,14 @@ contract CrossSwap is BaseHook {
     /// @notice Hook that is called before adding liquidity to a pool
     function beforeAddLiquidity(
         address sender,
-        PoolKey calldata,
+        PoolKey calldata key,
         IPoolManager.ModifyLiquidityParams calldata,
-        bytes calldata
+        bytes calldata data
     ) external view override returns (bytes4) {
         require(sender == address(this), "CrossSwap: Unauthorized sender");
+        require(data.length > 0, "CrossSwap: Missing ZK proof data");
+
+        Constants.ZkProofData memory zkProof = abi.decode(data, (Constants.ZkProofData));
 
         // Fetch latest liquidity proof from SharedLiquidityLedger
         bytes memory latestProof = sharedLiquidityLedger.getLatestLiquidityProof(hookChainId_);
@@ -172,6 +171,14 @@ contract CrossSwap is BaseHook {
     /*//////////////////////////////////////////////////////////////
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    function setZkClient(address zkClientAddress) external {
+        zkClient = ZkLightClient(zkClientAddress);
+    }
+
+    function getZkClient() external view returns (address) {
+        return address(zkClient);
+    }
 
     function addLiquidityWithCrossChainStrategy(
         PoolKey memory key,
@@ -844,11 +851,16 @@ contract CrossSwap is BaseHook {
         _settleDeltas(msg.sender, key, swapDelta);
     }
 
-    function setZkClient(address zkClientAddress) external {
-        zkClient = ZkLightClient(zkClientAddress);
-    }
+    function _verifyProof(Constants.ZkProofData memory zkProof, bool isSwap) internal view {
+        require(zkProof.publicSignals.length == (isSwap ? 5 : 4), "CrossSwap: Invalid number of public signals");
 
-    function getZkClient() external view returns (address) {
-        return address(zkClient);
+        uint256[] memory fixedSignals = zkProof.publicSignals;
+
+        if (isSwap) {
+            require(
+                sharedLiquidityLedger.verifySwapProof(zkProof.proofA, zkProof.proofB, zkProof.proofC, fixedSignals),
+                "CrossSwap: Invalid ZK proof"
+            );
+        }
     }
 }

@@ -1,26 +1,30 @@
 use expander_compiler::frontend::{Define, API};
-use expander_compiler::circuit::config::BN254Config;
 use expander_compiler::frontend::BasicAPI;
 
-pub struct SimpleCircuit<T> {
-    pub x: T,
-    pub y: T,
-    pub result: T,
-    pub is_addition: bool,
+pub struct SwapCircuit<T> {
+    pub input_token: T,
+    pub output_token: T,
+    pub liquidity: T,
+    pub slippage_tolerance: T,
+    pub expected_output: T,
 }
 
-impl<C: expander_compiler::circuit::config::Config> Define<C> for SimpleCircuit<C::CircuitField> {
+impl<C: expander_compiler::circuit::config::Config> Define<C> for SwapCircuit<C::CircuitField> {
     fn define(&self, builder: &mut API<C>) {
-        let x = builder.constant(self.x);
-        let y = builder.constant(self.y);
-        let expected_result = builder.constant(self.result);
-        
-        let computed_result = if self.is_addition {
-            builder.add(x, y)
-        } else {
-            builder.mul(x, y)
-        };
-        let diff = builder.sub(expected_result, computed_result);
-        builder.assert_is_zero(diff);
+        let input_token = builder.constant(self.input_token);
+        let _output_token = builder.constant(self.output_token);  // Prefixing with `_` to avoid warning
+        let liquidity = builder.constant(self.liquidity);
+        let slippage_tolerance = builder.constant(self.slippage_tolerance);
+        let expected_output = builder.constant(self.expected_output);
+
+        // Compute actual output after slippage
+        let numerator = builder.mul(input_token, liquidity);
+        let denominator = builder.add(liquidity, input_token);
+        let actual_output = builder.div(numerator, denominator, false);
+
+        // Ensure actual output meets slippage tolerance
+        let slippage_diff = builder.sub(actual_output, expected_output);
+        let max_slippage = builder.mul(expected_output, slippage_tolerance);
+        builder.assert_is_equal(slippage_diff, max_slippage);  
     }
 }
