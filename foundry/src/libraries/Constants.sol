@@ -76,6 +76,10 @@ library Errors {
     error FailedToWithdraw(address owner, address target, uint256 value);
     /// @notice Error when contract balance is insufficient
     error InsufficientFeeTokenAmount();
+    /// @notice Error when calling the pool manager fails
+    error NotPoolManager();
+    /// @notice Error when calling hooks
+    error HookNotImplemented();
 }
 
 library Events {
@@ -119,7 +123,7 @@ library Events {
     event StrategyRemoved(PoolId poolId, uint256 strategyId);
 
     /// @notice Event emitted when a new state root is updated
-    event MerkleRootUpdated(bytes32 newStateRoot);
+    event MerkleRootUpdated(uint16 hookChainId, bytes32 newStateRoot);
 
     event MerkleRootValidated(bytes32 merkleRoot);
 }

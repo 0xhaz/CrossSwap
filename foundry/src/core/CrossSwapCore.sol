@@ -26,36 +26,42 @@ import {ZKVerifier} from "src/zk/ZKVerifier.sol";
 import {PoseidonHasherLibrary} from "src/libraries/PoseidonHasherLib.sol";
 import {ISharedLiquidityLedger} from "src/interfaces/ISharedLiquidityLedger.sol";
 import {IMerkleTree} from "src/interfaces/IMerkleTree.sol";
-import {CCLib} from "src/libraries/CCLib.sol";
+// import {CCLib} from "src/libraries/CCLib.sol";
 import {console2} from "forge-std/Test.sol";
 
 abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLedger {
     using CurrencyLibrary for Currency;
-    using CurrencySettle for Currency;
+    using CurrencySettler for Currency;
     using PoolIdLibrary for PoolKey;
     using SafeCast for uint256;
     using SafeCast for uint128;
     using StateLibrary for IPoolManager;
 
-    IZkLightClient public zkClient;
-    ISharedLiquidityLedger public sharedLiquidityLedger;
-
     /*//////////////////////////////////////////////////////////////
-                           STORAGE VARIABLES
+                              STORAGE VARIABLES
     //////////////////////////////////////////////////////////////*/
+    address public authorizedUser_;
 
     uint256 public constant TREE_DEPTH = 32;
 
-    // mapping(bytes32 => Constants.Message) public messageDetail; // Mapping to keep track of the details of the received messages
+    ISharedLiquidityLedger public sharedLiquidityLedger;
+    IZkLightClient public zkClient;
 
-    // Authorized user
-    address public authorizedUser_;
+    /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
 
-    // Mappping of hook's chain ID
-    uint256 public hookChainId_;
+    /// @notice Modifier for functions that can only be called by the poolManager
+    modifier poolManagerOnly() {
+        if (msg.sender != address(poolManager)) revert Errors.NotPoolManager();
+        _;
+    }
 
-    // Mapping of strategy IDs to their respective liquidity distribution strategies
-    mapping(PoolId => mapping(uint256 => Constants.Strategy)) internal strategies;
+    /// @notice Modifier to restrict access to authorized user
+    modifier onlyAuthorizedUser() {
+        require(msg.sender == authorizedUser_, "CrossSwap: Unauthorized access");
+        _;
+    }
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -64,26 +70,166 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
     /// @notice Constructor initializes the contract with the address of the router
     constructor(
         IPoolManager poolManager,
+        Hooks.Permissions memory permissions,
         address authorizedUser,
-        uint256 hookChainId,
-        address _zkClient,
-        address _sharedLiquidityLedger,
-        Hooks.Permissions memory permissions
+        address zkClient_,
+        address sharedLiquidityLedger_
     ) BaseHook(poolManager) {
-        authorizedUser_ = authorizedUser;
-        hookChainId_ = hookChainId;
-        zkClient = IZkLightClient(_zkClient);
-        sharedLiquidityLedger = ISharedLiquidityLedger(_sharedLiquidityLedger);
         Hooks.validateHookPermissions(this, permissions);
+        authorizedUser = authorizedUser_;
+        zkClient = IZkLightClient(zkClient_);
+        sharedLiquidityLedger = ISharedLiquidityLedger(sharedLiquidityLedger_);
     }
 
     /*//////////////////////////////////////////////////////////////
-                               MODIFIERS
+                             HOOK FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Modifier to restrict access to authorized user
-    modifier onlyAuthorizedUser() {
-        require(msg.sender == authorizedUser_, "CrossSwap: Unauthorized access");
-        _;
+    /// @inheritdoc IHooks
+    function beforeAddLiquidity(address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata)
+        external
+        virtual
+        override
+        returns (bytes4)
+    {
+        revert Errors.HookNotImplemented();
+    }
+
+    /// @inheritdoc IHooks
+    function afterAddLiquidity(
+        address,
+        PoolKey calldata,
+        IPoolManager.ModifyLiquidityParams calldata,
+        BalanceDelta,
+        BalanceDelta,
+        bytes calldata
+    ) external virtual override returns (bytes4, BalanceDelta) {
+        revert Errors.HookNotImplemented();
+    }
+
+    /// @inheritdoc IHooks
+    function beforeRemoveLiquidity(
+        address,
+        PoolKey calldata,
+        IPoolManager.ModifyLiquidityParams calldata,
+        bytes calldata
+    ) external override returns (bytes4) {
+        revert Errors.HookNotImplemented();
+    }
+
+    /// @inheritdoc IHooks
+    function afterRemoveLiquidity(
+        address,
+        PoolKey calldata,
+        IPoolManager.ModifyLiquidityParams calldata,
+        BalanceDelta,
+        BalanceDelta,
+        bytes calldata
+    ) external virtual override returns (bytes4, BalanceDelta) {
+        revert Errors.HookNotImplemented();
+    }
+
+    /// @inheritdoc IHooks
+    function beforeSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, bytes calldata)
+        external
+        virtual
+        override
+        returns (bytes4, BeforeSwapDelta, uint24)
+    {
+        revert Errors.HookNotImplemented();
+    }
+
+    /// @inheritdoc IHooks
+    function afterSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata)
+        external
+        virtual
+        override
+        returns (bytes4, int128)
+    {
+        revert Errors.HookNotImplemented();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        OVERRIDE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function updateLiquidityState(uint256 chainId, bytes32 newStateRoot, bytes memory zkProof)
+        public
+        override
+        onlyAuthorizedUser
+    {
+        sharedLiquidityLedger.updateLiquidityState(chainId, newStateRoot, zkProof);
+    }
+
+    function getLatestLiquidityState(uint256 chainId) public view override returns (bytes32) {
+        return sharedLiquidityLedger.getLatestLiquidityState(chainId);
+    }
+
+    function getLatestLiquidityProof(uint256 chainId) public view override returns (bytes memory) {
+        return sharedLiquidityLedger.getLatestLiquidityProof(chainId);
+    }
+
+    function insert(bytes32 leaf) public override onlyAuthorizedUser returns (bytes32 newRoot) {
+        return sharedLiquidityLedger.insert(leaf);
+    }
+
+    function getMerkleProof(uint256 index) public view override returns (bytes32[TREE_DEPTH] memory proof) {
+        return sharedLiquidityLedger.getMerkleProof(index);
+    }
+
+    function verifyProof(bytes32 leaf, bytes32[TREE_DEPTH] memory proof, bytes32 root, uint256 index)
+        public
+        view
+        override
+        returns (bool)
+    {
+        return sharedLiquidityLedger.verifyProof(leaf, proof, root, index);
+    }
+
+    function getMerkleRoot() public view override returns (bytes32) {
+        return sharedLiquidityLedger.getMerkleRoot();
+    }
+
+    function sendMessage(uint16 dstChainId, address dstHook, bytes memory payload)
+        public
+        payable
+        override
+        returns (uint64)
+    {
+        return zkClient.sendMessage(dstChainId, dstHook, payload);
+    }
+
+    function zkReceive(uint256 srchChainId, address srcAddress, uint64 nonce, bytes memory payload) external override {
+        zkClient.zkReceive(srchChainId, srcAddress, nonce, payload);
+    }
+
+    function estimateFee(uint16 dstChainId) external view override returns (uint256) {
+        return zkClient.estimateFee(dstChainId);
+    }
+
+    function stateTree() external view override returns (IMerkleTree) {
+        return sharedLiquidityLedger.stateTree();
+    }
+
+    function currentIndex() public view override returns (uint256) {
+        return sharedLiquidityLedger.currentIndex();
+    }
+
+    function verifyLiquidityProof(
+        uint256[2] memory proofA,
+        uint256[2][2] memory proofB,
+        uint256[2] memory proofC,
+        uint256[4] memory publicSignals
+    ) external view override returns (bool) {
+        return sharedLiquidityLedger.verifyLiquidityProof(proofA, proofB, proofC, publicSignals);
+    }
+
+    function verifySwapProof(
+        uint256[2] memory proofA,
+        uint256[2][2] memory proofB,
+        uint256[2] memory proofC,
+        uint256[5] memory publicSignals
+    ) external view override returns (bool) {
+        return sharedLiquidityLedger.verifySwapProof(proofA, proofB, proofC, publicSignals);
     }
 }
