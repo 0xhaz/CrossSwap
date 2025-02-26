@@ -37,15 +37,9 @@ contract CrossSwap is CrossSwapCore {
     using SafeCast for uint128;
     using StateLibrary for IPoolManager;
 
-    IZkLightClient public zkClient;
-    ISharedLiquidityLedger public sharedLiquidityLedger;
-
     /*//////////////////////////////////////////////////////////////
                            STORAGE VARIABLES
     //////////////////////////////////////////////////////////////*/
-
-    // Mappping of hook's chain ID
-    uint256 public hookChainId_;
 
     // Mapping of strategy IDs to their respective liquidity distribution strategies
     mapping(PoolId => mapping(uint256 => Constants.Strategy)) internal strategies;
@@ -57,38 +51,13 @@ contract CrossSwap is CrossSwapCore {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Constructor initializes the contract with the address of the router
-    constructor(uint256 hookChainId)
-        BaseHook(
-            Hooks.Permissions({
-                beforeInitialize: false,
-                afterInitialize: false,
-                beforeAddLiquidity: true,
-                afterAddLiquidity: true,
-                beforeRemoveLiquidity: true,
-                afterRemoveLiquidity: true,
-                beforeSwap: true,
-                afterSwap: true,
-                beforeDonate: false,
-                afterDonate: false,
-                beforeSwapReturnDelta: false,
-                afterSwapReturnDelta: false,
-                afterAddLiquidityReturnDelta: false,
-                afterRemoveLiquidityReturnDelta: false
-            })
-        )
-    {
-        hookChainId_ = hookChainId;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                               MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Modifier to restrict access to authorized user
-    modifier onlyAuthorizedUser() {
-        require(msg.sender == authorizedUser_, "CrossSwap: Unauthorized access");
-        _;
-    }
+    constructor(
+        IPoolManager poolManager,
+        address authorizedUser,
+        address zkClient_,
+        address sharedLiquidityLedger_,
+        uint256 hookChainId
+    ) CrossSwapCore(poolManager, authorizedUser, zkClient_, sharedLiquidityLedger_, hookChainId) {}
 
     /*//////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
@@ -116,7 +85,7 @@ contract CrossSwap is CrossSwapCore {
         PoolKey calldata key,
         IPoolManager.ModifyLiquidityParams calldata params,
         bytes calldata data
-    ) external view override returns (bytes4) {
+    ) external override returns (bytes4) {
         require(sender == address(this), "CrossSwap: Unauthorized sender");
         require(data.length > 0, "CrossSwap: Missing ZK proof data");
 
@@ -130,12 +99,24 @@ contract CrossSwap is CrossSwapCore {
         // Check if this liquidity position already exists
         bytes32 existingRoot = getLatestLiquidityState(hookChainId_);
 
-        if (existingRoot == zkProof.publicSignals[0]) {
+        if (existingRoot == bytes32(zkProof.publicSignals[0])) {
             return this.beforeAddLiquidity.selector;
         }
 
         _executeAddLiquidity(
-            key, params, uint16(hookChainId_), address(this), uint256(params.liquidityDelta), sqrtPriceX96, zkProof
+            Constants.LiquidityParams({
+                sender: sender,
+                key: key,
+                params: params,
+                swapParams: IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
+                destinationChainId: uint16(hookChainId_),
+                destinationHook: address(this),
+                liquidity: uint256(params.liquidityDelta),
+                sqrtPriceX96: sqrtPriceX96,
+                zkProof: zkProof,
+                isSwap: false,
+                isCrossChain: false
+            })
         );
 
         return this.beforeAddLiquidity.selector;
@@ -199,12 +180,9 @@ contract CrossSwap is CrossSwapCore {
             destinationChainId: uint16(hookChainId_),
             sender: sender,
             destinationHook: address(this),
-            token0: Currency.unwrap(key.currency0),
+            key: key,
             amount0: uint256(params.liquidityDelta),
-            token1: Currency.unwrap(key.currency1),
             amount1: 0,
-            fee: key.fee,
-            tickSpacing: key.tickSpacing,
             tickLower: params.tickLower,
             tickUpper: params.tickUpper,
             isSwap: false,
@@ -212,7 +190,7 @@ contract CrossSwap is CrossSwapCore {
         });
 
         // Process liquidity update
-        _processLiquidity(receivedMessage, zkProof);
+        _processLiquidity(receivedMessage, abi.encode(zkProof));
 
         return this.beforeRemoveLiquidity.selector;
     }
@@ -262,7 +240,7 @@ contract CrossSwap is CrossSwapCore {
         PoolKey calldata key,
         IPoolManager.SwapParams calldata params,
         bytes calldata data
-    ) external view override returns (bytes4, BeforeSwapDelta, uint24) {
+    ) external override returns (bytes4, BeforeSwapDelta, uint24) {
         require(sender == address(this), "CrossSwap: Unauthorized sender");
         require(data.length > 0, "CrossSwap: Missing ZK proof data");
 
@@ -272,20 +250,32 @@ contract CrossSwap is CrossSwapCore {
         // Verify zk-SNARK proof
         _verifyProof(zkProof, true);
 
+        Constants.LiquidityParams memory swapParams = Constants.LiquidityParams({
+            sender: sender,
+            key: key,
+            params: IPoolManager.ModifyLiquidityParams({liquidityDelta: 0, tickLower: 0, tickUpper: 0, salt: 0}),
+            swapParams: params,
+            destinationChainId: uint16(hookChainId_),
+            destinationHook: address(this),
+            liquidity: 0,
+            sqrtPriceX96: 0,
+            zkProof: zkProof,
+            isSwap: true,
+            isCrossChain: false
+        });
+
         // Execute the swap
-        _executePrivacySwap(key, params, zkProof);
+        _executePrivacySwap(swapParams);
 
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
     /// @notice Hook that is called after swapping tokens in a pool
-    function afterSwap(
-        address sender,
-        PoolKey calldata,
-        IPoolManager.SwapParams calldata,
-        BalanceDelta delta,
-        bytes calldata data
-    ) external override returns (bytes4, int128) {
+    function afterSwap(address, PoolKey calldata, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata data)
+        external
+        override
+        returns (bytes4, int128)
+    {
         require(msg.sender == address(this), "CrossSwap: Unauthorized sender");
         require(data.length > 0, "CrossSwap: Missing ZK proof data");
 
@@ -376,193 +366,123 @@ contract CrossSwap is CrossSwapCore {
                            CALLBACK FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _unlockCallback(bytes calldata rawData) internal override returns (bytes memory) {
+    function _unlockCallback(bytes calldata rawData) internal override onlyPoolManager returns (bytes memory) {
         Constants.CallbackData memory data = abi.decode(rawData, (Constants.CallbackData));
         PoolKey memory key = data.key;
 
-        return abi.encode(delta);
+        bool isCrossChain = _isCrossChain(uint16(data.strategyId));
+        bool isSwap = _isSwap(data.params);
+
+        // Decode zkProof data
+        Constants.ZkProofData memory zkProof = abi.decode(data.params, (Constants.ZkProofData));
+
+        if (isCrossChain) {
+            _handleCrossChain(data.sender, key, data.params, isSwap, zkProof, hookChainId_);
+        } else {
+            _handleLocalTransaction(key, data.sender, data.params, data.strategyId, isSwap, zkProof);
+        }
+
+        return abi.encode(BalanceDeltaLibrary.ZERO_DELTA);
     }
 
     /*//////////////////////////////////////////////////////////////
                              CROSS CHAIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function sendMessage(Constants.CrossChainParams memory params) external returns (bytes32 messageId) {
-        Constants.CrossChainParams memory sendMsg = Constants.CrossChainParams({
-            destinationChainId: destinationChainId,
-            receiver: receiver,
-            sender: sender,
-            token0: token0,
-            amount0: amount0,
-            token1: token1,
-            amount1: amount1,
-            fee: fee,
-            tickSpacing: tickSpacing,
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            isSwap: isSwap,
-            zkProof: zkProof
-        });
-
-        return _sendMessage(sendMsg);
-    }
-
     function _sendMessage(Constants.CrossChainParams memory params) internal returns (bytes32 messageId) {
-        bytes memory payload = abi.encode(
-            params.sender,
-            params.token0,
-            params.amount0,
-            params.token1,
-            params.amount1,
-            params.fee,
-            params.tickSpacing,
-            params.tickLower,
-            params.tickUpper,
-            params.isSwap,
-            params.zkProof
-        );
+        bytes memory payload = abi.encode(params);
 
-        zkClient.send(params.destinationChainId, abi.encodePacked(params.receiver), uint64(block.timestamp), payload);
+        uint256 estimateFee = estimateFee(params.destinationChainId);
+        require(msg.value >= estimateFee, "CrossSwap: Insufficient fee");
+
+        sendMessage(params.destinationChainId, params.destinationHook, payload);
 
         messageId = keccak256(payload);
     }
 
     /// @notice Function to receive a message from another chain
-    function zkReceive(uint16 srcChainId, bytes memory payload) external {
+    function zkReceive(uint16 srcChainId, bytes calldata payload) external {
         require(msg.sender == address(zkClient), "CrossSwap: Unauthorized sender");
 
-        Constants.SendMessageParams memory params = abi.decode(payload, (Constants.SendMessageParams));
+        Constants.CrossChainParams memory receivedMessage = abi.decode(payload, (Constants.CrossChainParams));
+        Constants.LiquidityParams memory swapParams = abi.decode(payload, (Constants.LiquidityParams));
 
-        Constants.Message memory receivedMessage = Constants.Message({
-            sourceChainId: srcChainId,
-            sender: params.sender,
-            token0: params.token0,
-            amount0: params.amount0,
-            token1: params.token1,
-            amount1: params.amount1,
-            fee: params.fee,
-            tickSpacing: params.tickSpacing,
-            tickLower: params.tickLower,
-            tickUpper: params.tickUpper
+        address token0 = Currency.unwrap(receivedMessage.key.currency0);
+        address token1 = Currency.unwrap(receivedMessage.key.currency1);
+
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: receivedMessage.key.fee,
+            tickSpacing: receivedMessage.key.tickSpacing,
+            hooks: IHooks(address(this))
         });
 
-        require(zkVerifier.verifyProof(params.zkProof), "CrossSwap: Invalid ZK proof");
+        Constants.ZkProofData memory zkProof = abi.decode(receivedMessage.zkProof, (Constants.ZkProofData));
 
-        if (params.isSwap) {
-            _executeSwapWithPrivacy(receivedMessage, params.zkProof);
+        if (receivedMessage.isSwap) {
+            _verifyProof(zkProof, true);
+
+            _executePrivacySwap(
+                Constants.LiquidityParams({
+                    sender: receivedMessage.sender,
+                    key: key,
+                    params: IPoolManager.ModifyLiquidityParams({liquidityDelta: 0, tickLower: 0, tickUpper: 0, salt: 0}),
+                    swapParams: swapParams.swapParams,
+                    destinationChainId: srcChainId,
+                    destinationHook: address(this),
+                    liquidity: 0,
+                    sqrtPriceX96: 0,
+                    zkProof: zkProof,
+                    isSwap: true,
+                    isCrossChain: true
+                })
+            );
         } else {
-            _processLiquidity(receivedMessage);
+            _processLiquidity(receivedMessage, abi.encode(zkProof));
+
+            IPoolManager.ModifyLiquidityParams memory modifyParams = IPoolManager.ModifyLiquidityParams({
+                liquidityDelta: int256(uint256(receivedMessage.amount0)),
+                tickLower: receivedMessage.tickLower,
+                tickUpper: receivedMessage.tickUpper,
+                salt: bytes32(0)
+            });
+
+            BalanceDelta delta = abi.decode(
+                poolManager.unlock(
+                    abi.encode(
+                        Constants.CallbackData({
+                            sender: receivedMessage.sender,
+                            key: key,
+                            params: abi.encode(modifyParams),
+                            strategyId: 1
+                        })
+                    )
+                ),
+                (BalanceDelta)
+            );
+
+            _settleDeltas(receivedMessage.sender, key, delta);
         }
-
-        emit Events.MessageReceived(
-            payload, srcChainId, params.sender, params.token0, params.amount0, params.token1, params.amount1
-        );
-    }
-
-    function safeDecodeSendMessageParams(bytes memory payload)
-        external
-        pure
-        returns (Constants.CrossChainParams memory)
-    {
-        return abi.decode(payload, (Constants.SendMessageParams));
-    }
-
-    /// @notice Get the total number of received messages
-    /// @return number The total number of received messages
-    function getNumberOfReceivedMessages() external view returns (uint256 number) {
-        return receivedMessages.length;
-    }
-
-    function getReceivedMessageDetails(bytes32 messageId)
-        external
-        view
-        returns (
-            uint16 sourceChainId,
-            address sender,
-            address token0,
-            uint256 amount0,
-            address token1,
-            uint256 amount1,
-            uint24 fee,
-            int24 tickSpacing,
-            int24 tickLower,
-            int24 tickUpper
-        )
-    {
-        Constants.Message memory detail = messageDetail[messageId];
-        if (detail.sender == address(0)) revert Errors.MessageIdNotExists(messageId);
-        return (
-            detail.sourceChainId,
-            detail.sender,
-            detail.token0,
-            detail.amount0,
-            detail.token1,
-            detail.amount1,
-            detail.fee,
-            detail.tickSpacing,
-            detail.tickLower,
-            detail.tickUpper
-        );
-    }
-
-    function getReceivedMessageAt(uint256 index)
-        external
-        view
-        returns (
-            bytes32 messageId,
-            uint16 sourceChainId,
-            address sender,
-            address token0,
-            uint256 amount0,
-            address token1,
-            uint256 amount1
-        )
-    {
-        if (index >= receivedMessages.length) revert Errors.IndexOutOfBounds(index, receivedMessages.length - 1);
-
-        messageId = receivedMessages[index];
-        Constants.Message memory detail = messageDetail[messageId];
-        return (
-            messageId, detail.sourceChainId, detail.sender, detail.token0, detail.amount0, detail.token1, detail.amount1
-        );
-    }
-
-    function getLastReceivedMessageDetails()
-        external
-        view
-        returns (
-            bytes32 messageId,
-            uint16 sourceChainId,
-            address sender,
-            address token0,
-            uint256 amount0,
-            address token1,
-            uint256 amount1
-        )
-    {
-        if (receivedMessages.length == 0) revert Errors.NoMessageReceived();
-
-        // Fetch the last received message ID
-        messageId = receivedMessages[receivedMessages.length - 1];
-
-        // Fetch the details of the last received message
-        Constants.Message memory detail = messageDetail[messageId];
-
-        return (
-            messageId, detail.sourceChainId, detail.sender, detail.token0, detail.amount0, detail.token1, detail.amount1
-        );
     }
 
     /*//////////////////////////////////////////////////////////////
                             HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _processLiquidity(Constants.CrossChainParams memory receivedMessage, bytes zkProof) private {
+    function _processLiquidity(Constants.CrossChainParams memory receivedMessage, bytes memory zkProof) private {
+        address token0 = Currency.unwrap(receivedMessage.key.currency0);
+        address token1 = Currency.unwrap(receivedMessage.key.currency1);
+
+        Constants.ZkProofData memory proofData = abi.decode(zkProof, (Constants.ZkProofData));
+
+        _verifyProof(proofData, false);
+
         PoolKey memory key = PoolKey({
-            currency0: Currency.wrap(receivedMessage.token0),
-            currency1: Currency.wrap(receivedMessage.token1),
-            fee: receivedMessage.fee,
-            tickSpacing: receivedMessage.tickSpacing,
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: receivedMessage.key.fee,
+            tickSpacing: receivedMessage.key.tickSpacing,
             hooks: IHooks(address(this))
         });
 
@@ -589,12 +509,8 @@ contract CrossSwap is CrossSwapCore {
                     Constants.CallbackData({
                         sender: msg.sender,
                         key: key,
-                        params: modifyParams,
-                        strategyId: 1,
-                        isCrossChainIncoming: true,
-                        isSwap: false,
-                        swapParams: IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
-                        zkProof: Constants.ZERO_BYTES
+                        params: abi.encode(modifyParams),
+                        strategyId: 1
                     })
                 )
             ),
@@ -608,12 +524,15 @@ contract CrossSwap is CrossSwapCore {
     }
 
     function _refundRemainingTokens(Constants.CrossChainParams memory params) private {
+        address token0 = Currency.unwrap(params.key.currency0);
+        address token1 = Currency.unwrap(params.key.currency1);
+
         if (params.amount0 > 0) {
-            IERC20Minimal(params.token0).transfer(params.sender, params.amount0);
+            IERC20Minimal(token0).transfer(params.sender, params.amount0);
         }
 
         if (params.amount1 > 0) {
-            IERC20Minimal(params.token1).transfer(params.sender, params.amount1);
+            IERC20Minimal(token1).transfer(params.sender, params.amount1);
         }
     }
 
@@ -634,9 +553,11 @@ contract CrossSwap is CrossSwapCore {
         }
 
         // Ensure no rounding errors
-        uint256 roundingAdjustment = liquidityAmount - totalAllocated;
-        if (roundingAdjustment > 0) {
-            liquidityAmounts[0] += roundingAdjustment;
+        uint256 remainingAdjustment;
+        for (uint256 i = 0; i < strategy.percentages.length && remainingAdjustment > 0; i++) {
+            uint256 adjust = remainingAdjustment / (strategy.percentages.length - i);
+            liquidityAmounts[i] += adjust;
+            remainingAdjustment -= adjust;
         }
     }
 
@@ -663,44 +584,6 @@ contract CrossSwap is CrossSwapCore {
         }
     }
 
-    function _transferCrossChain(
-        address sender,
-        address hook,
-        uint16 destinationChainId,
-        PoolKey memory key,
-        uint256 amount0,
-        uint256 amount1,
-        int24 tickLower,
-        int24 tickUpper,
-        bool isSwap,
-        bytes memory zkProof
-    ) internal {
-        if (zkProof.length == 0) {
-            zkProof = zkVerifier.generateProof(abi.encode(key, amount0, amount1, isSwap));
-        }
-
-        IERC20Minimal(Currency.unwrap(key.currency0)).transferFrom(sender, address(this), amount0);
-        IERC20Minimal(Currency.unwrap(key.currency1)).transferFrom(sender, address(this), amount1);
-
-        Constants.SendMessageParams memory params = Constants.SendMessageParams({
-            destinationChainId: destinationChainId,
-            receiver: hook,
-            sender: sender,
-            token0: Currency.unwrap(key.currency0),
-            amount0: amount0,
-            token1: Currency.unwrap(key.currency1),
-            amount1: amount1,
-            fee: key.fee,
-            tickSpacing: key.tickSpacing,
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            isSwap: isSwap,
-            zkProof: zkProof
-        });
-
-        _sendMessage(params);
-    }
-
     function _takeDeltas(address sender, PoolKey memory key, BalanceDelta delta) internal {
         poolManager.take(key.currency0, sender, uint256(uint128(-delta.amount0())));
         poolManager.take(key.currency1, sender, uint256(uint128(-delta.amount1())));
@@ -715,66 +598,68 @@ contract CrossSwap is CrossSwapCore {
         currency.settle(poolManager, sender, amount, false);
     }
 
-    function _executePrivacySwap(
-        PoolKey memory key,
-        Constants.CrossChainParams memory params,
-        Constants.ZkProofData memory zkProof
-    ) internal {
-        require(zkVerifier.verifyProof(zkProof), "CrossSwap: Invalid ZK proof");
+    function _executePrivacySwap(Constants.LiquidityParams memory swapParams) private {
+        require(swapParams.isSwap, "CrossSwap: Not a swap");
 
-        bytes32 latestStateRoot = sharedLiquidityLedger.getLatestLiquidityState(receivedMessage.sourceChainId);
-        bytes32[TREE_DEPTH] memory proof = stateTree.getMerkleProof(receivedMessage.sourceChainId);
+        Constants.ZkProofData memory proofData = swapParams.zkProof;
 
-        // require(
-        //     stateTree.verifyProof(latestStateRoot, proof.stateTree.getMerkleRoot()), "CrossSwap: Invalid state root"
-        // );
+        _verifyProof(proofData, true);
 
-        key = PoolKey({
-            currency0: Currency.wrap(receivedMessage.token0),
-            currency1: Currency.wrap(receivedMessage.token1),
-            fee: receivedMessage.fee,
-            tickSpacing: receivedMessage.tickSpacing,
-            hooks: IHooks(address(this))
-        });
-
-        IPoolManager.SwapParams memory swapParams = IPoolManager.SwapParams({
-            zeroForOne: receivedMessage.amount0 > 0,
-            amountSpecified: int256(receivedMessage.amount0 > 0 ? receivedMessage.amount0 : receivedMessage.amount1),
-            sqrtPriceLimitX96: 0
-        });
+        (uint256 amount0, uint256 amount1) = _calculateSwapAmounts(swapParams.swapParams);
 
         BalanceDelta swapDelta = abi.decode(
             poolManager.unlock(
                 abi.encode(
                     Constants.CallbackData({
-                        sender: msg.sender,
-                        key: key,
-                        params: IPoolManager.ModifyLiquidityParams(0, 0, 0, bytes32(0)),
-                        strategyId: 0,
-                        isCrossChainIncoming: true,
-                        isSwap: true,
-                        swapParams: swapParams,
-                        zkProof: zkProof
+                        sender: swapParams.sender,
+                        key: swapParams.key,
+                        params: abi.encode(swapParams.params),
+                        strategyId: 1
                     })
                 )
             ),
             (BalanceDelta)
         );
 
-        _settleDeltas(msg.sender, key, swapDelta);
+        _settleDeltas(swapParams.sender, swapParams.key, swapDelta);
+
+        Constants.CrossChainParams memory crossChainParams = Constants.CrossChainParams({
+            sourceChainId: uint16(hookChainId_),
+            destinationChainId: swapParams.destinationChainId,
+            sender: swapParams.sender,
+            destinationHook: swapParams.destinationHook,
+            key: swapParams.key,
+            amount0: amount0,
+            amount1: amount1,
+            tickLower: 0,
+            tickUpper: 0,
+            isSwap: true,
+            zkProof: abi.encode(proofData)
+        });
+
+        if (swapParams.isCrossChain) {
+            _transferCrossChain(crossChainParams);
+        }
     }
 
     function _verifyProof(Constants.ZkProofData memory zkProof, bool isSwap) internal view {
-        require(zkProof.publicSignals.length == (isSwap ? 5 : 4), "CrossSwap: Invalid number of public signals");
-
-        uint256[] memory fixedSignals = zkProof.publicSignals;
+        uint256 length = isSwap ? 5 : 4;
+        require(zkProof.publicSignals.length == length, "CrossSwap: Invalid number of public signals");
 
         if (isSwap) {
+            uint256[5] memory fixedSignals;
+            for (uint256 i = 0; i < length; i++) {
+                fixedSignals[i] = zkProof.publicSignals[i];
+            }
             require(
                 sharedLiquidityLedger.verifySwapProof(zkProof.proofA, zkProof.proofB, zkProof.proofC, fixedSignals),
                 "CrossSwap: Invalid swap proof"
             );
         } else {
+            uint256[4] memory fixedSignals;
+            for (uint256 i = 0; i < length; i++) {
+                fixedSignals[i] = zkProof.publicSignals[i];
+            }
             require(
                 sharedLiquidityLedger.verifyLiquidityProof(zkProof.proofA, zkProof.proofB, zkProof.proofC, fixedSignals),
                 "CrossSwap: Invalid liquidity proof"
@@ -782,7 +667,7 @@ contract CrossSwap is CrossSwapCore {
         }
     }
 
-    function _executeAddLiquidity(uint256 hookChainId, address sender, Constants.LiquidityParams memory liquidityParams)
+    function _executeAddLiquidity(Constants.LiquidityParams memory liquidityParams)
         internal
         returns (BalanceDelta delta)
     {
@@ -790,15 +675,33 @@ contract CrossSwap is CrossSwapCore {
         (uint256 amount0, uint256 amount1) =
             _calculateTokenAmounts(liquidityParams.params, liquidityParams.liquidity, liquidityParams.sqrtPriceX96);
 
+        delta = abi.decode(
+            poolManager.unlock(
+                abi.encode(
+                    Constants.CallbackData({
+                        sender: liquidityParams.sender,
+                        key: liquidityParams.key,
+                        params: abi.encode(liquidityParams.params),
+                        strategyId: 1
+                    })
+                )
+            ),
+            (BalanceDelta)
+        );
+
+        _settleDeltas(liquidityParams.sender, liquidityParams.key, delta);
+
         // Update Merkle tree with new liquidity state
         bytes32 newStateRoot = PoseidonHasherLibrary.hashSingle(bytes32(amount0), bytes32(amount1));
-        _updateMerkleTree(hookChainId_, newStateRoot);
+        _updateMerkleTree(uint16(hookChainId_), newStateRoot);
 
-        emit Events.MerkleRootUpdated(hookChainId, newStateRoot);
+        emit Events.MerkleRootUpdated(uint16(hookChainId_), newStateRoot);
 
         // Store proof data for state consistency
         bytes memory zkProofEncoded = abi.encode(liquidityParams.zkProof);
         updateLiquidityState(liquidityParams.destinationChainId, newStateRoot, zkProofEncoded);
+
+        return delta;
     }
 
     function _updateMerkleTree(uint16 chainId, bytes32 newStateRoot) private {
@@ -819,36 +722,114 @@ contract CrossSwap is CrossSwapCore {
         address sender,
         PoolKey memory key,
         bytes memory params,
-        bool isSwap,
+        bool isSwap_,
         Constants.ZkProofData memory zkProof,
         uint256 hookChainId
     ) private {
         require(
-            (isSwap && zkProof.publicSignals.length == 5 || !isSwap && zkProof.publicSignals.length == 4),
+            (isSwap_ && zkProof.publicSignals.length == 5 || !isSwap_ && zkProof.publicSignals.length == 4),
             "CrossSwap: Invalid number of public signals"
         );
 
-        Constants.CrossChainParams memory receivedMessage = Constants.CrossChainParams({
-            sourceChainId: uint16(hookChainId),
-            destinationChainId: 0,
-            sender: sender,
-            destinationHook: address(0),
-            token0: Currency.unwrap(key.currency0),
-            amount0: uint256(abi.encode(params, (int256))),
-            token1: Currency.unwrap(key.currency1),
-            amount1: 0,
-            fee: key.fee,
-            tickSpacing: key.tickSpacing,
-            tickLower: 0,
-            tickUpper: 0,
-            isSwap: isSwap,
-            zkProof: abi.encode(zkProof)
-        });
+        if (isSwap_) {
+            IPoolManager.SwapParams memory swapParams = abi.decode(params, (IPoolManager.SwapParams));
 
-        if (isSwap) {
-            _executePrivacySwap(key, abi.encode(params, (IPoolManager.SwapParams)), zkProof);
+            Constants.LiquidityParams memory liquidityParams = Constants.LiquidityParams({
+                sender: sender,
+                key: key,
+                params: IPoolManager.ModifyLiquidityParams({liquidityDelta: 0, tickLower: 0, tickUpper: 0, salt: bytes32(0)}),
+                swapParams: swapParams,
+                destinationChainId: uint16(hookChainId),
+                destinationHook: address(0),
+                liquidity: 0,
+                sqrtPriceX96: 0,
+                zkProof: zkProof,
+                isSwap: true,
+                isCrossChain: true
+            });
+
+            _executePrivacySwap(liquidityParams);
         } else {
-            _processLiquidity(receivedMessage, zkProof);
+            IPoolManager.ModifyLiquidityParams memory modifyParams =
+                abi.decode(params, (IPoolManager.ModifyLiquidityParams));
+
+            Constants.CrossChainParams memory receivedMessage = Constants.CrossChainParams({
+                sourceChainId: uint16(hookChainId),
+                destinationChainId: 0,
+                sender: sender,
+                destinationHook: address(0),
+                key: key,
+                amount0: uint256(modifyParams.liquidityDelta),
+                amount1: 0,
+                tickLower: modifyParams.tickLower,
+                tickUpper: modifyParams.tickUpper,
+                isSwap: false,
+                zkProof: abi.encode(zkProof)
+            });
+
+            _processLiquidity(receivedMessage, abi.encode(zkProof));
+        }
+    }
+
+    function _handleLocalTransaction(
+        PoolKey memory key,
+        address sender,
+        bytes memory params,
+        uint256 strategyId,
+        bool isSwap_,
+        Constants.ZkProofData memory zkProof
+    ) private {
+        PoolId poolId = key.toId();
+        IPoolManager.ModifyLiquidityParams memory modifyParams =
+            abi.decode(params, (IPoolManager.ModifyLiquidityParams));
+        Constants.Strategy storage strategy = strategies[poolId][strategyId];
+
+        uint256[] memory liquidityAmounts = _calculateLiquidityAmounts(strategy, uint256(modifyParams.liquidityDelta));
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+
+        for (uint256 i; i < strategy.chainIds.length; ++i) {
+            uint256 liquidity = liquidityAmounts[i];
+            uint16 destinationChainId = uint16(strategy.chainIds[i]);
+            address destinationHook = strategy.hooks[i];
+
+            BalanceDelta delta;
+            if (isSwap_) {
+                IPoolManager.SwapParams memory swapParams = abi.decode(params, (IPoolManager.SwapParams));
+
+                Constants.LiquidityParams memory liquidityParams = Constants.LiquidityParams({
+                    sender: sender,
+                    key: key,
+                    params: modifyParams,
+                    swapParams: swapParams,
+                    destinationChainId: destinationChainId,
+                    destinationHook: destinationHook,
+                    liquidity: liquidity,
+                    sqrtPriceX96: sqrtPriceX96,
+                    zkProof: zkProof,
+                    isSwap: true,
+                    isCrossChain: false
+                });
+
+                _executePrivacySwap(liquidityParams);
+            } else {
+                Constants.LiquidityParams memory liquidityParams = Constants.LiquidityParams({
+                    sender: sender,
+                    key: key,
+                    params: modifyParams,
+                    swapParams: IPoolManager.SwapParams({zeroForOne: false, amountSpecified: 0, sqrtPriceLimitX96: 0}),
+                    destinationChainId: destinationChainId,
+                    destinationHook: destinationHook,
+                    liquidity: liquidity,
+                    sqrtPriceX96: sqrtPriceX96,
+                    zkProof: zkProof,
+                    isSwap: false,
+                    isCrossChain: false
+                });
+
+                delta = _executeAddLiquidity(liquidityParams);
+            }
+
+            _takeDeltas(sender, key, delta);
         }
     }
 
@@ -858,7 +839,31 @@ contract CrossSwap is CrossSwapCore {
     }
 
     // Function to determine if it's a swap
-    function isSwap(bytes memory params) private pure returns (bool) {
+    function _isSwap(bytes memory params) private pure returns (bool) {
         return params.length == 32;
+    }
+
+    function _calculateSwapAmounts(IPoolManager.SwapParams memory params)
+        private
+        pure
+        returns (uint256 amount0, uint256 amount1)
+    {
+        amount0 = params.zeroForOne
+            ? uint256(params.amountSpecified > 0 ? params.amountSpecified : -params.amountSpecified)
+            : 0;
+        amount1 = params.zeroForOne
+            ? 0
+            : uint256(params.amountSpecified > 0 ? params.amountSpecified : -params.amountSpecified);
+    }
+
+    function _transferCrossChain(Constants.CrossChainParams memory transferParams) private {
+        IERC20Minimal(Currency.unwrap(transferParams.key.currency0)).transferFrom(
+            transferParams.sender, address(this), transferParams.amount0
+        );
+        IERC20Minimal(Currency.unwrap(transferParams.key.currency1)).transferFrom(
+            transferParams.sender, address(this), transferParams.amount1
+        );
+
+        _sendMessage(transferParams);
     }
 }

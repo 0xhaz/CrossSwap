@@ -40,6 +40,10 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
     /*//////////////////////////////////////////////////////////////
                               STORAGE VARIABLES
     //////////////////////////////////////////////////////////////*/
+    // Mappping of hook's chain ID
+    uint256 public hookChainId_;
+
+    // Authorized user
     address public authorizedUser_;
 
     uint256 public constant TREE_DEPTH = 32;
@@ -70,15 +74,38 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
     /// @notice Constructor initializes the contract with the address of the router
     constructor(
         IPoolManager poolManager,
-        Hooks.Permissions memory permissions,
         address authorizedUser,
         address zkClient_,
-        address sharedLiquidityLedger_
+        address sharedLiquidityLedger_,
+        uint256 hookChainId
     ) BaseHook(poolManager) {
-        Hooks.validateHookPermissions(this, permissions);
         authorizedUser = authorizedUser_;
         zkClient = IZkLightClient(zkClient_);
         sharedLiquidityLedger = ISharedLiquidityLedger(sharedLiquidityLedger_);
+        hookChainId_ = hookChainId;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                 HOOKS
+    //////////////////////////////////////////////////////////////*/
+
+    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        return Hooks.Permissions({
+            beforeInitialize: false,
+            afterInitialize: false,
+            beforeAddLiquidity: true,
+            afterAddLiquidity: true,
+            beforeRemoveLiquidity: true,
+            afterRemoveLiquidity: true,
+            beforeSwap: true,
+            afterSwap: true,
+            beforeDonate: false,
+            afterDonate: false,
+            beforeSwapReturnDelta: false,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -113,7 +140,7 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
         PoolKey calldata,
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
-    ) external override returns (bytes4) {
+    ) external virtual override returns (bytes4) {
         revert Errors.HookNotImplemented();
     }
 
@@ -203,7 +230,7 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
         zkClient.zkReceive(srchChainId, srcAddress, nonce, payload);
     }
 
-    function estimateFee(uint16 dstChainId) external view override returns (uint256) {
+    function estimateFee(uint16 dstChainId) public view override returns (uint256) {
         return zkClient.estimateFee(dstChainId);
     }
 

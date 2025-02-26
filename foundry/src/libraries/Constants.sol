@@ -35,6 +35,7 @@ library Constants {
 
     /// Unified struct for liquidity execution (both swaps & adding liquidity)
     struct LiquidityParams {
+        address sender;
         PoolKey key;
         IPoolManager.ModifyLiquidityParams params;
         IPoolManager.SwapParams swapParams;
