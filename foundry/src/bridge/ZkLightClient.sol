@@ -53,7 +53,6 @@ contract ZkLightClient is IZKBridgeReceiver {
     function sendMessage(uint16 dstChainId, address destHook, bytes memory payload) external payable returns (uint64) {
         require(msg.value > 0, "ZkLightClient: Relayer fee required");
 
-        // Call zkBridge send function
         uint64 nonce = IZKBridge(zkBridge).send{value: msg.value}(dstChainId, destHook, payload);
 
         emit MessageSent(uint16(block.chainid), dstChainId, destHook, nonce, payload);
@@ -79,7 +78,6 @@ contract ZkLightClient is IZKBridgeReceiver {
 
         emit MessageReceived(srcChainId, srcAddress, nonce, payload);
 
-        // Decode payload and attempt to execute action
         (address receiver, bytes memory messageData) = abi.decode(payload, (address, bytes));
 
         (bool success, bytes memory returnData) = receiver.call(
@@ -100,5 +98,33 @@ contract ZkLightClient is IZKBridgeReceiver {
      */
     function estimateFee(uint16 dstChainId) external view returns (uint256 fee) {
         return IZKBridge(zkBridge).estimateFee(dstChainId);
+    }
+
+    /**
+     * @notice Returns the address of the token vault for bridging
+     * @return vault Address of the token vault
+     */
+    function tokenVault() external view returns (address) {
+        return IZKBridge(zkBridge).tokenVault(); // Delegate to zkBridge
+    }
+
+    /**
+     * @notice Bridges tokens to the destination chain
+     * @param token Address of the token to bridge
+     * @param amount Amount of tokens to bridge
+     * @param dstChainId Destination chain ID
+     */
+    function bridgeToken(address token, uint256 amount, uint16 dstChainId) external {
+        IZKBridge(zkBridge).bridgeToken(token, amount, dstChainId); // Delegate to zkBridge
+    }
+
+    /**
+     * @notice Unlocks or mints tokens on the destination chain
+     * @param token Address of the token to unlock
+     * @param amount Amount of tokens to unlock
+     * @param srcChainId Source chain ID
+     */
+    function unlockToken(address token, uint256 amount, uint16 srcChainId) external {
+        IZKBridge(zkBridge).unlockToken(token, amount, srcChainId); // Delegate to zkBridge
     }
 }

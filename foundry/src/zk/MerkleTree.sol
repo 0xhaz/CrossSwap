@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.26;
 
-import {PoseidonHasherLibrary} from "src/libraries/PoseidonHasherLib.sol";
+import {PoseidonT5} from "poseidon-solidity/PoseidonT5.sol";
 import {console2} from "forge-std/Console2.sol";
 
 contract MerkleTree {
-    using PoseidonHasherLibrary for bytes32[];
-
-    uint256 public constant TREE_DEPTH = 32;
+    uint256 public constant TREE_DEPTH = 20;
     bytes32[TREE_DEPTH] public zeroes; // Default zero hashes for an empty tree
     bytes32[TREE_DEPTH] public filledSubtrees; // Stores intermediate hashes
     uint256 public currentIndex; // Next available index for a new leaf
@@ -19,7 +17,8 @@ contract MerkleTree {
         // Initialize zeroes
         zeroes[0] = bytes32(0);
         for (uint256 i = 1; i < TREE_DEPTH; i++) {
-            zeroes[i] = PoseidonHasherLibrary.hashSingle(zeroes[i - 1], zeroes[i - 1]);
+            uint256[4] memory input = [uint256(zeroes[i - 1]), uint256(zeroes[i - 1]), 0, 0];
+            zeroes[i] = bytes32(PoseidonT5.hash(input));
         }
 
         // Initialize filled subtrees with zero values
@@ -45,9 +44,11 @@ contract MerkleTree {
 
             if ((index & 1) == 0) {
                 filledSubtrees[i] = node;
-                node = PoseidonHasherLibrary.hashSingle(node, zeroes[i]);
+                uint256[4] memory input = [uint256(node), uint256(zeroes[i]), 0, 0];
+                node = bytes32(PoseidonT5.hash(input));
             } else {
-                node = PoseidonHasherLibrary.hashSingle(filledSubtrees[i], node);
+                uint256[4] memory input = [uint256(filledSubtrees[i]), uint256(node), 0, 0];
+                node = bytes32(PoseidonT5.hash(input));
             }
             index >>= 1;
         }
@@ -79,15 +80,17 @@ contract MerkleTree {
     /// @notice Verifies a Merkle proof
     function verifyProof(bytes32 leaf, bytes32[TREE_DEPTH] memory proof, bytes32 root, uint256 index)
         external
-        view
+        pure
         returns (bool)
     {
         bytes32 node = leaf;
         for (uint256 i = 0; i < TREE_DEPTH; i++) {
             if ((index >> i) & 1 == 0) {
-                node = PoseidonHasherLibrary.hashSingle(node, proof[i]);
+                uint256[4] memory input = [uint256(node), uint256(proof[i]), 0, 0];
+                node = bytes32(PoseidonT5.hash(input));
             } else {
-                node = PoseidonHasherLibrary.hashSingle(proof[i], node);
+                uint256[4] memory input = [uint256(proof[i]), uint256(node), 0, 0];
+                node = bytes32(PoseidonT5.hash(input));
             }
         }
         return node == root;
@@ -95,5 +98,9 @@ contract MerkleTree {
 
     function getMerkleRoot() external view returns (bytes32) {
         return merkleRoot;
+    }
+
+    function getCurrentIndex() external view returns (uint256) {
+        return currentIndex;
     }
 }

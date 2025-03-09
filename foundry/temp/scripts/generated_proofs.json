@@ -1,0 +1,71 @@
+[
+  {
+    "circuit": "LiquidityCircuit",
+    "inputs": {
+      "expected_new_total": "1050000000000000000000",
+      "liquidity_added": "50000000000000000000",
+      "pool_total_liquidity": "1000000000000000000000",
+      "user_balance": "100000000000000000000"
+    },
+    "proof": "46a53b5193be3db4e40c42e56627e3ec5f67a0d26df98917d6c6b59234f42114",
+    "verified": true
+  },
+  {
+    "circuit": "LiquidityCircuit",
+    "inputs": {
+      "expected_new_total": "1020000000000000000000",
+      "liquidity_added": "20000000000000000000",
+      "pool_total_liquidity": "1000000000000000000000",
+      "user_balance": "10000000000000000000"
+    },
+    "proof": "46a53b5193be3db4e40c42e56627e3ec5f67a0d26df98917d6c6b59234f42114",
+    "verified": false
+  },
+  {
+    "circuit": "LiquidityCircuit",
+    "inputs": {
+      "expected_new_total": "0",
+      "liquidity_added": "0",
+      "pool_total_liquidity": "0",
+      "user_balance": "0"
+    },
+    "proof": "46a53b5193be3db4e40c42e56627e3ec5f67a0d26df98917d6c6b59234f42114",
+    "verified": true
+  },
+  {
+    "circuit": "SwapCircuitGKR",
+    "inputs": {
+      "expected_output": "9900000000000000000",
+      "input_token": "10000000000000000000",
+      "liquidity": "1000000000000000000000",
+      "output_token": "9000000000000000000",
+      "slippage_tolerance": "50000000000000000"
+    },
+    "proof": "46a53b5193be3db4e40c42e56627e3ec5f67a0d26df98917d6c6b59234f42114",
+    "verified": true
+  },
+  {
+    "circuit": "SwapCircuitGKR",
+    "inputs": {
+      "expected_output": "40000000000000000000",
+      "input_token": "100000000000000000000",
+      "liquidity": "1000000000000000000000",
+      "output_token": "50000000000000000000",
+      "slippage_tolerance": "50000000000000000"
+    },
+    "proof": "46a53b5193be3db4e40c42e56627e3ec5f67a0d26df98917d6c6b59234f42114",
+    "verified": false
+  },
+  {
+    "circuit": "SwapCircuitGKR",
+    "inputs": {
+      "expected_output": "0",
+      "input_token": "0",
+      "liquidity": "0",
+      "output_token": "0",
+      "slippage_tolerance": "50000000000000000"
+    },
+    "proof": "46a53b5193be3db4e40c42e56627e3ec5f67a0d26df98917d6c6b59234f42114",
+    "verified": true
+  }
+]

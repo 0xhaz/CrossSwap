@@ -8,7 +8,7 @@ import {PoseidonHasherLibrary} from "src/libraries/PoseidonHasherLib.sol";
 
 contract MerkleTreeTest is Test {
     MerkleTree tree;
-    uint256 public constant TREE_DEPTH = 32;
+    uint256 public constant TREE_DEPTH = 20;
 
     function setUp() public {
         DeployMerkleTree deployer = new DeployMerkleTree();
@@ -92,7 +92,7 @@ contract MerkleTreeTest is Test {
         tree.insert(leaf);
 
         // Generate Merkle proof
-        bytes32[32] memory proof = tree.getMerkleProof(leafIndex);
+        bytes32[20] memory proof = tree.getMerkleProof(leafIndex);
         bytes32 root = tree.getMerkleRoot();
 
         // console2.log("Generated Proof:");

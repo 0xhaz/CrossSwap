@@ -1,0 +1,584 @@
+   Compiling circuit v0.1.0 (/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuits)
+warning: unused import: `ark_bn254::Fr`
+ --> src/swap_circuit.rs:5:5
+  |
+5 | use ark_bn254::Fr;
+  |     ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `num_bigint::BigInt`
+  --> src/swap_circuit.rs:10:5
+   |
+10 | use num_bigint::BigInt;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::liquidity_circuit::LiquidityCircuit`
+ --> src/proof.rs:1:5
+  |
+1 | use crate::liquidity_circuit::LiquidityCircuit;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::swap_circuit::SwapCircuitGKR`
+ --> src/proof.rs:2:5
+  |
+2 | use crate::swap_circuit::SwapCircuitGKR;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `I256` and `U160`
+ --> src/proof.rs:8:37
+  |
+8 | use crate::libraries::types::{U256, U160, I256};
+  |                                     ^^^^  ^^^^
+
+warning: unused import: `ark_bn254::Fr`
+ --> src/liquidity_circuit.rs:5:5
+  |
+5 | use ark_bn254::Fr;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `expander_transcript::Proof`
+ --> src/cross_chain_circuit.rs:4:5
+  |
+4 | use expander_transcript::Proof;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ethnum::U256 as EthnumU256`
+  --> src/cross_chain_circuit.rs:14:5
+   |
+14 | use ethnum::U256 as EthnumU256;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `arith::FieldForECC`
+ --> src/merkle_tree.rs:5:5
+  |
+5 | use arith::FieldForECC;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ark_serialize::CanonicalSerialize`
+ --> src/poseidon_bn254.rs:4:5
+  |
+4 | use ark_serialize::CanonicalSerialize;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `log::debug`
+ --> src/common.rs:1:5
+  |
+1 | use log::debug;
+  |     ^^^^^^^^^^
+
+warning: unused import: `std::str::FromStr`
+ --> src/libraries/types.rs:6:5
+  |
+6 | use std::str::FromStr;
+  |     ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `log::debug`
+ --> src/libraries/types.rs:7:5
+  |
+7 | use log::debug;
+  |     ^^^^^^^^^^
+
+warning: unused import: `ark_std::One`
+ --> src/libraries/bit_math.rs:2:5
+  |
+2 | use ark_std::One;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `log::debug`
+ --> src/libraries/full_math.rs:2:5
+  |
+2 | use log::debug;
+  |     ^^^^^^^^^^
+
+warning: unused import: `log::debug`
+ --> src/libraries/sqrt_price_math.rs:4:5
+  |
+4 | use log::debug;
+  |     ^^^^^^^^^^
+
+warning: unused import: `log::debug`
+ --> src/libraries/tick_math.rs:4:5
+  |
+4 | use log::debug;
+  |     ^^^^^^^^^^
+
+warning: unused variable: `amount_specified`
+  --> src/swap_circuit.rs:37:13
+   |
+37 |         let amount_specified = builder.constant(u256_to_bn254(self.amount_specified.abs()));
+   |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_amount_specified`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `sqrt_price_current_x96`
+  --> src/swap_circuit.rs:39:13
+   |
+39 |         let sqrt_price_current_x96 = builder.constant(u256_to_bn254(U256::from(self.sqrt_price_current_x96)));
+   |             ^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sqrt_price_current_x96`
+
+warning: unused variable: `liquidity`
+  --> src/swap_circuit.rs:40:13
+   |
+40 |         let liquidity = builder.constant(u256_to_bn254(U256::from(self.liquidity)));
+   |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_liquidity`
+
+warning: unused variable: `fee_pips`
+  --> src/swap_circuit.rs:41:13
+   |
+41 |         let fee_pips = builder.constant(BN254::from(self.fee_pips));
+   |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_fee_pips`
+
+warning: unused variable: `final_delta`
+  --> src/swap_circuit.rs:79:13
+   |
+79 |         let final_delta = if self.hook_data == vec![2] {
+   |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_final_delta`
+
+warning: unused variable: `amount_in_scaled`
+   --> src/swap_circuit.rs:103:13
+    |
+103 |         let amount_in_scaled = amount_in / decimals;
+    |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_amount_in_scaled`
+
+warning: unused variable: `amount_out_scaled`
+   --> src/swap_circuit.rs:104:13
+    |
+104 |         let amount_out_scaled = amount_out;
+    |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_amount_out_scaled`
+
+warning: unused variable: `fee_amount_scaled`
+   --> src/swap_circuit.rs:105:13
+    |
+105 |         let fee_amount_scaled = fee_amount / decimals;
+    |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_fee_amount_scaled`
+
+warning: unused variable: `decimals`
+   --> src/swap_circuit.rs:120:13
+    |
+120 |         let decimals = U256::from(10).pow(U256::from(18));
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_decimals`
+
+warning: unused variable: `liquidity_delta`
+  --> src/liquidity_circuit.rs:38:13
+   |
+38 |         let liquidity_delta = builder.constant(u256_to_bn254(U256::from(self.liquidity_delta.abs() as u128)));
+   |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_liquidity_delta`
+
+warning: unused variable: `salt`
+  --> src/liquidity_circuit.rs:40:13
+   |
+40 |         let salt = builder.constant(u256_to_bn254(U256::from_little_endian(&self.salt)));
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_salt`
+
+warning: unused variable: `sqrt_price_current_x96`
+  --> src/liquidity_circuit.rs:41:13
+   |
+41 |         let sqrt_price_current_x96 = builder.constant(u256_to_bn254(self.sqrt_price_current_x96));
+   |             ^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_sqrt_price_current_x96`
+
+warning: unused variable: `zero`
+  --> src/liquidity_circuit.rs:44:13
+   |
+44 |         let zero = builder.constant(BN254::zero());
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_zero`
+
+warning: unused variable: `min_tick`
+  --> src/liquidity_circuit.rs:46:13
+   |
+46 |         let min_tick = builder.constant(BN254::from(887272u32));
+   |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_min_tick`
+
+warning: unused variable: `fees_accrued`
+  --> src/liquidity_circuit.rs:90:13
+   |
+90 |         let fees_accrued = BalanceDelta { amount0: I256::zero(), amount1: I256::zero() };
+   |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_fees_accrued`
+
+warning: unused variable: `caller_delta`
+  --> src/liquidity_circuit.rs:92:13
+   |
+92 |         let caller_delta = if self.hook_data == vec![2] {
+   |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_caller_delta`
+
+warning: unused variable: `is_in_range`
+   --> src/liquidity_circuit.rs:106:13
+    |
+106 |         let is_in_range = builder.mul(is_in_range_lower, is_in_range_upper);
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_is_in_range`
+
+warning: unused variable: `decimals`
+  --> src/scenarios.rs:10:9
+   |
+10 |     let decimals = U256::from(10).pow(U256::from(18));
+   |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_decimals`
+
+warning: unused variable: `name`
+  --> src/scenarios.rs:70:5
+   |
+70 |     name: &str,
+   |     ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+
+warning: unused variable: `name`
+  --> src/scenarios.rs:92:5
+   |
+92 |     name: &str,
+   |     ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+
+warning: field `public_outputs` is never read
+  --> src/proof.rs:32:5
+   |
+29 | pub struct VerifierCircuitGKR {
+   |            ------------------ field in this struct
+...
+32 |     public_outputs: Vec<U256>,
+   |     ^^^^^^^^^^^^^^
+   |
+   = note: `VerifierCircuitGKR` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: fields `capacity` and `rate` are never read
+  --> src/poseidon_bn254.rs:13:5
+   |
+8  | pub struct PoseidonParameters {
+   |            ------------------ fields in this struct
+...
+13 |     capacity: usize,
+   |     ^^^^^^^^
+14 |     rate: usize,
+   |     ^^^^
+
+warning: `circuit` (lib) generated 39 warnings (run `cargo fix --lib -p circuit` to apply 17 suggestions)
+warning: unused import: `self`
+ --> src/main.rs:2:26
+  |
+2 | use circuit::scenarios::{self, create_large_batch_test};
+  |                          ^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `expander_transcript::Proof`
+ --> src/main.rs:3:5
+  |
+3 | use expander_transcript::Proof;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `circuit` (bin "circuit") generated 2 warnings (run `cargo fix --bin "circuit"` to apply 2 suggestions)
+    Finished `release` profile [optimized] target(s) in 3.69s
+     Running `/Volumes/extreme/Projects/Solidity/Portfolio/zk-uniswap-v4/foundry/circuits/target/release/circuit`
+Created large batch with 150 circuits: 60 swaps, 40 liquidity, 50 cross-chain
+Initial Proof: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+Circuit 0 - intermediate_proof: 0x0b7c06a48ee59ae59e790542131a6846f57fec8f0c24e0776e98a5f429a86ef5
+Circuit 1 - intermediate_proof: 0x266622d002d5c328a535b80843a5058749357b551a30c734888990ed4a03a4ed
+Circuit 2 - intermediate_proof: 0x2d3682e150aef6e01d8820c9b5dc33096317213ee25e6245271386e568b084e0
+Circuit 3 - intermediate_proof: 0x1a96c8510ce2045dd40c34ea539ca25a0ba289a2807fea25e52356b05a6d60ba
+Circuit 4 - intermediate_proof: 0x027dabe72f0063a10208b82a31b94dddab6f5407de889380ca5451838c2618c4
+Circuit 5 - intermediate_proof: 0x1144f4fe700ce641dc3e7bfcd42f7084ede81d03100048e0d7d9d7b0f5e16a22
+Circuit 6 - intermediate_proof: 0x23f0ad59b93de9d35e2b7723e05f4ee7f072c4399363d0d2258421105fbe5fd9
+Circuit 7 - intermediate_proof: 0x19751892d67e17665369842988dc17e6b8de9fe8ffa6adedd7db0b2578264a33
+Circuit 8 - intermediate_proof: 0x1ec0d2903c43b827165ecdba72ea92a2371d12c149249ff6170edec3ca00af4c
+Circuit 9 - intermediate_proof: 0x0669614e1be4bf938e69ac0381cb04059d19f78e540d3c3230ccaf43f05078a2
+Circuit 10 - intermediate_proof: 0x245e951e8af77233a7d0cb75a15760b37fe91b369ce5059d675e1c9ba3e53709
+Circuit 11 - intermediate_proof: 0x0076bce99875e1150775c10e118842f9244988bdf8466d07c5937bf3d9a1b84d
+Circuit 12 - intermediate_proof: 0x280e8ce551fa979a5f81f152129a370419c33f99a1f6e87b4e5cec999afd9255
+Circuit 13 - intermediate_proof: 0x13a671afa2c71ad008bd7efd119459bd36ee4cda478399b551ad0d15365ff700
+Circuit 14 - intermediate_proof: 0x1417386c6226fe7b58cd152e282e1e52503cac9eb383dfe8870cc187874196a7
+Circuit 15 - intermediate_proof: 0x172aae8dfc4f6f08eb70131ee234d516d388499b1a357f2504a62f33f7e301bd
+Circuit 16 - intermediate_proof: 0x1a719dbe83f0bcea55bc1455a9cc1adf34ebecd5754c870ee8e91ea500dabf1b
+Circuit 17 - intermediate_proof: 0x049c2fb8bb1db2126d9fee8c9be182cdf341545c166b811b748554c0e79a3a14
+Circuit 18 - intermediate_proof: 0x23381d833af8f422e776a4d3a5534c931d1fe8710757c8fe8b38fb217ace4a8f
+Circuit 19 - intermediate_proof: 0x1aacf7e771b7cc90a0be583c0856b4acc32d31021902adcc215627852f583fe0
+Circuit 20 - intermediate_proof: 0x10132ef25a38ab0520a4561f296ec5bdc7ac4a20e7c4edd2b81da03527a3da4b
+Circuit 21 - intermediate_proof: 0x2792cc355c825e2798e6f8e10ea9265d7ae2ec3da3d1a838109b7d7f095a7564
+Circuit 22 - intermediate_proof: 0x15ec7fa2eeb353cfb28c2c99769fef29e609207af5694f119f9a0b5a9eb77a58
+Circuit 23 - intermediate_proof: 0x1a23ec694ce62a41c2356af885115b970cb104f60366e5187806be2085ae0a16
+Circuit 24 - intermediate_proof: 0x215c6775d7bd36e067790ef513f8bbd27458784e3144eed55b7b016c78a1e3da
+Circuit 25 - intermediate_proof: 0x010df2fe023cf570f2d7999edc294cd1823a10733c90390ecf916c2a64964a8d
+Circuit 26 - intermediate_proof: 0x26e7516c3c7a86a2e8383258ab8c86a477d82d25b9ca5075a62cccaa3e57af82
+Circuit 27 - intermediate_proof: 0x26ddb2613d9862e048758909e42217dc4b4ba39501de132e564be08d57c80432
+Circuit 28 - intermediate_proof: 0x1a70debc271b687429ef8728cbef938abf8f51844b7c2b5a45387ebfacf31247
+Circuit 29 - intermediate_proof: 0x0ab862cbc52a1300b0e6c11bf09c26fadb51a5213d7f7faa3d023af14e92f35c
+Circuit 30 - intermediate_proof: 0x04576606aa2a0e7b173f454c7af3ee48482be6639ec3df4b386522203eddfd8d
+Circuit 31 - intermediate_proof: 0x128266e4943fbd88932004dc81ce106fd30fdd2406a82e36f36f9213cfae089d
+Circuit 32 - intermediate_proof: 0x22fe0f8cee60b29381ba08066511d5ef6f0c6087d236440645599fd016bcec07
+Circuit 33 - intermediate_proof: 0x11ca5c950484b782a4b0a1e2a53c33c488a4d3c07d8f5bdd279672f424ab6376
+Circuit 34 - intermediate_proof: 0x066da4cd583f8b91d510257ff85e447b89f1f67be4ec870f76771f7363daaeaa
+Circuit 35 - intermediate_proof: 0x12432bc5493a35013415d476529f934d4f2a6a79fb0aa52c2e8e5a249b9e5666
+Circuit 36 - intermediate_proof: 0x11850306db1e4dc0987e92dde520fa812a4220e45310f4674030641f316c9e6b
+Circuit 37 - intermediate_proof: 0x0cbc81cdc45e620f7707324bac6653b068f981336573c00e46ad94ad5bc29fdf
+Circuit 38 - intermediate_proof: 0x178c99e8af631137cacf48a535f5258479d3f93630ebbd11c30f59809129bd6d
+Circuit 39 - intermediate_proof: 0x107ef90bd44d5abd2e38d277e75b1e8aa51f559ced7da032e02363aef779bf61
+Circuit 40 - intermediate_proof: 0x21eca54f31c19c8e674067f3a45cca05262db73470ce594c532e067b32670b87
+Circuit 41 - intermediate_proof: 0x0f96bfb03a13628de1da79c9ced712e0cb55342ab460e4befd304e1c8be526cc
+Circuit 42 - intermediate_proof: 0x0eb3f38492a33b0d0a5d361ebcb9ee7621620ba427cc8f0f79d1cf121be2dd9f
+Circuit 43 - intermediate_proof: 0x0e1549e694e62e982d35b46002aef65e4d017ba6b4d81adcd2070b9c40b4194b
+Circuit 44 - intermediate_proof: 0x193065be9c7a962538c6c6da81898ae5d385249c652cd5fd983e8a7a705a5686
+Circuit 45 - intermediate_proof: 0x04c72a90cb77b25a75a92458761064cbb2d116e41c010fafeca3e24368a2422a
+Circuit 46 - intermediate_proof: 0x22d89fa327544ad009eb62e29272567cebc47145de0dfd2e972b8505597a64f8
+Circuit 47 - intermediate_proof: 0x0cf2738bbf49ac24db481aed6c4d35d2dbdff89b821c0cab4b42a61cdaf2b06b
+Circuit 48 - intermediate_proof: 0x1e9c9f109d5e52d920c2e56a8e7db8d08e578056769a8ef465a8e6b01443f7ca
+Circuit 49 - intermediate_proof: 0x0d03f7d03e63aaeab4ec1d2f480f93b3c79bbaba7987d0c516dc720e49c40e16
+Circuit 50 - intermediate_proof: 0x2ffbb7e89b04876239db8b85c5ba1a395e4ddb948b581a775857b71f5470c9a3
+Circuit 51 - intermediate_proof: 0x1a477ca3268176bebb4242bc921e0cfe1a045a2fea9f27393b44c87df0cb9cc3
+Circuit 52 - intermediate_proof: 0x2a910b264c0b3f4eb23ef4a72134ec71e1903026990d5e52da6cd0ef06b9f0f9
+Circuit 53 - intermediate_proof: 0x06c31d537dcebf296dbcab634f0fd90b1612c27cfccec4a1cf43170e4d23b19a
+Circuit 54 - intermediate_proof: 0x209e0fe2ad6730b41f73eeac65cd90b80d08245b95eb36e3778df6001aa47e98
+Circuit 55 - intermediate_proof: 0x264e02aecacf568691f6e74e0322384ee31e9b5ef03dd2dd6143ecd9218379f6
+Circuit 56 - intermediate_proof: 0x05b70fef6432a9ad1ff0d99f173cf3d524483f1444ca324f05d554e102f1b459
+Circuit 57 - intermediate_proof: 0x0cf5ddebbeeb4c7415be1c773135d4669d9588a324d3349b57fc0d4fe45fbf87
+Circuit 58 - intermediate_proof: 0x1c03ab65c100bb151c46c1778f4e19734cf4320dd5c0902574518af5c0757d1b
+Circuit 59 - intermediate_proof: 0x1bb500e49131d1ab0e6194486dec63de98ee8e35e8909706da25d4a28d6f90c6
+Circuit 60 - intermediate_proof: 0x210c72938714528b6071f816cd80e6051d3acf8dc383a7b99e7dde3c63209bde
+Circuit 61 - intermediate_proof: 0x04c574fb2ec54035ba3d264193b9dac0b939bc09a3968d961570c240e27469fe
+Circuit 62 - intermediate_proof: 0x0a438b9f51ed87bcbfbff2577b4a1c7eb8a12f1fa08b0ed0e717a99f6f76f56c
+Circuit 63 - intermediate_proof: 0x11a4737bda9066b99308c963394de1ae387024bb0e25148b64c67c59cee53ec1
+Circuit 64 - intermediate_proof: 0x0bce091fa5067eeabcc63f2a1569949f36e953fd6f3fc7b095bdfbc21a3c243e
+Circuit 65 - intermediate_proof: 0x0da23d4d6937d46ea7da23f775022750e4391a540c81dbc0fe96a3f600027d52
+Circuit 66 - intermediate_proof: 0x2161919164ea515350e8d8e4646c2442fff400393b046d3cfbdde36dff19ac50
+Circuit 67 - intermediate_proof: 0x06b23f559802517725802f08a25224af807e25e0803e5548540c5abd04fbdc99
+Circuit 68 - intermediate_proof: 0x29279d4ebaf447c8f21e19bbbca8691e2932d4ccf298087ad8446256f29c532f
+Circuit 69 - intermediate_proof: 0x27d7d961e44bd4e1a81112f984f8ec67632ee04f0b37de07e34b265c689fe791
+Circuit 70 - intermediate_proof: 0x2d23ed94eca07f7f70154f8e1bad762248ebdb92383ddb4a72aac4a2bb7e9b0b
+Circuit 71 - intermediate_proof: 0x039e8ef10e5f1300a6af4ee484471e0fa793145d179dcd6f3727374a5586f06e
+Circuit 72 - intermediate_proof: 0x2b262dabfe67819c767204819a3dd36baa2c8ea25124f0aaa9404da1d1504ecd
+Circuit 73 - intermediate_proof: 0x01a6a2d78625da510edc76ffedc73b99e4483abefceda666c751d3dbb826629c
+Circuit 74 - intermediate_proof: 0x05c6f527f64671a258f3aadddd0993c8a9f3430c5632f822ecc73fc1119a8a57
+Circuit 75 - intermediate_proof: 0x1ac7cdca15bd9fa9e8247f4a202bcfd62204d504b9463aadc0765698e640814d
+Circuit 76 - intermediate_proof: 0x2a43a3714cf1d9fe148a53cf0a161900202ec4977af9bbef66a7dda2eff8c091
+Circuit 77 - intermediate_proof: 0x2b233707fb74f0f3e55d4b93046aaf63716f00dae11638e6bd0fedcec2cd53a2
+Circuit 78 - intermediate_proof: 0x23ca18ff3d5fab79d96f098dafc02af8e16ec307738b1fe79c4af0bbc9a91fca
+Circuit 79 - intermediate_proof: 0x0483ca2e3800be9095b49e4496abd3c614f889584da3e63a965ef1222f7f566b
+Circuit 80 - intermediate_proof: 0x3027aaebaf90cf1095b27d204351844a6fc4504c733fc0a61bbaea7d387154cc
+Circuit 81 - intermediate_proof: 0x05187c88bbed0c587595f4cfaca54ad0d8763586a36df9c85ecf62bbc3f4a9b5
+Circuit 82 - intermediate_proof: 0x211a05ddf20f6d572dd43ef98ebead984e0dcda4e9f6d2ee7608fddc18a679f7
+Circuit 83 - intermediate_proof: 0x27f8be164e7f632faca64fca2e26a94cec23c4d2c05c482824b96332d5e33248
+Circuit 84 - intermediate_proof: 0x12305538b5fea616bc01db923081ec7457ace42b27b5d2ce5b339847eeda7511
+Circuit 85 - intermediate_proof: 0x18bfab741c09973a0c465fc79ab245d01c9315970331ee09dd84e471c1bc357e
+Circuit 86 - intermediate_proof: 0x0fc6af3d34d913f9939af73249a341c1a57cee0479104201377035313d0b4498
+Circuit 87 - intermediate_proof: 0x21866eec64304ec84e7adbd29ba9dc08b1d1a6c796a58d627342af0ab3d8eda5
+Circuit 88 - intermediate_proof: 0x2b17b366a8c3c862618708f5c9c017bfc0147453a06f1e70089657a9d29d3e56
+Circuit 89 - intermediate_proof: 0x09b4d659bdcba2f0272eab5c4011c795f5d24e91814ba46d04c0354ee5531900
+Circuit 90 - intermediate_proof: 0x2ecca116d2ffbbefa49d5745257d28ad0a1fc0dbc92fe67dc6eede7685ad6f3f
+Circuit 91 - intermediate_proof: 0x2891aebd06798468272adf716687dc37b7276a323e651731d67dc83285a12e59
+Circuit 92 - intermediate_proof: 0x0b0e540dc7f142a78676b9f7e0cfc06152204a04a883acf84cf71326f72943d6
+Circuit 93 - intermediate_proof: 0x1f10591e17e8369f10ec9f9895b95a97b099dbaf23176ebd31f6aae80946324d
+Circuit 94 - intermediate_proof: 0x19c05824fe0556e093bcce314aafbdc541c2b3a669f259d22156539fdf3295f6
+Circuit 95 - intermediate_proof: 0x0755cb8c0b351bfa4f384d84a298aec48f5e71f196c0186583fc09d8d110a492
+Circuit 96 - intermediate_proof: 0x0629c378b135471b8e2e8be89a7c227d1e49cfaa250f54bcb1b5546118f0e0cb
+Circuit 97 - intermediate_proof: 0x0cb19100c43854cd27516138b04f7f3f8f715f878694fc0362d8e4d29148d06f
+Circuit 98 - intermediate_proof: 0x104e902a35d1c154ec93965afaabb00a12a3efed4563ed8d1eda3b36368c37ef
+Circuit 99 - intermediate_proof: 0x1cd891389b450133f04c00d4d6225f464452e14cd651bf57c83015a827e87324
+Circuit 100 - intermediate_proof: 0x198c1b7a089d2c5ca02018bc4a16aaa2a6d3170bfbaf401f4eace4cfe99db0ae
+Circuit 101 - intermediate_proof: 0x0d5235b5fe6d9ccdafd73b777cf4b3e58ab4785d785899536ef699fc6949f82a
+Circuit 102 - intermediate_proof: 0x025d8080b283bbb742993b35c8f4f1c5c8877e8a7f9e4f24c112362e63305fb5
+Circuit 103 - intermediate_proof: 0x12831924c4251e3fad60e88d13b60feaecf914491145b44fde7f0bfb16919f65
+Circuit 104 - intermediate_proof: 0x041ab041fc269fa01dca55784f60c203ed5cbafe107657402d20c8886dd03374
+Circuit 105 - intermediate_proof: 0x0418c10f18d2aa8b5bb638baa20aba137c1394fa256e718236e44020bbd1109c
+Circuit 106 - intermediate_proof: 0x0c3957d2def1f82925bd4e09cd9d2cd6ed550db2ec5852f2cf71d9005948e0ab
+Circuit 107 - intermediate_proof: 0x01e81efbd77cdcbb24b13f86be52612665e440d72268f6d491e48c9e513da785
+Circuit 108 - intermediate_proof: 0x10c547e0db4443acb0c50241207917318b709766183a6ab650a7be2aa6c68840
+Circuit 109 - intermediate_proof: 0x061a4a89605150f7eabd9e8c1d2ed68c429ecca9fc3bb84fb3a6da15188d39a8
+Circuit 110 - intermediate_proof: 0x250803f68b63fa2baf97c7567ad634bf1ca71f2add43bf831d6cdf15de08345b
+Circuit 111 - intermediate_proof: 0x17a8ea542320896f19b7b5d579e82ce85701b9529ea1ca137f5b2fb214bd721d
+Circuit 112 - intermediate_proof: 0x1716da4f55d4a2056a6f7512e2dfd6fdb773aa019835c17e743a62b940d0b67a
+Circuit 113 - intermediate_proof: 0x12ac7d5333436c5d4ceb7531eee107ed2fc804f5fdf1d825648fb56d828bbeb1
+Circuit 114 - intermediate_proof: 0x15057f60f5a439dd7108f071a184e8c98963d8a96512d07104f5034f3b95ec92
+Circuit 115 - intermediate_proof: 0x177446d2516dec49c572dece7a30bd53b90d237dcbf066c335f173481e571247
+Circuit 116 - intermediate_proof: 0x16a3e797c1443c54131c2863fe3344d27313fde9f9d70d5d38bc03ae1c1114c4
+Circuit 117 - intermediate_proof: 0x1b0064d700a3e73b6af66f47dce6387bdad0977756ff51569d6e20c441822330
+Circuit 118 - intermediate_proof: 0x0aa8474939a6fbbd95e678e0ec3fce8b598b41c58e1b96cacd6c0284b2440dde
+Circuit 119 - intermediate_proof: 0x085693bf0bf5ab6ecd701e62eba7b2ff6f974d4e7879413fbd66a9c1cbcb535a
+Circuit 120 - intermediate_proof: 0x0fecf7f4dc60636837fffc74f59ddb94221a7c5050ad29b42e578604b8a04389
+Circuit 121 - intermediate_proof: 0x0584486eb2856f7599cc404ab29deb7a57f0af5bc7aa074d8bbae189834f48e9
+Circuit 122 - intermediate_proof: 0x03cdf1f88afac2e96aa615db8b30e2bbcc4ef2f05f119655c501480fe5ab56cc
+Circuit 123 - intermediate_proof: 0x0821480b975995b2c2d7bd0fbd7053c2f57b6f48bc765cc0c822d586f5adafde
+Circuit 124 - intermediate_proof: 0x26ef5a1505887f09024685007e34c79ce14a0f169583709112ebc6332034deff
+Circuit 125 - intermediate_proof: 0x259459b37cd2a12585ad4a0879d1e2a61dad563d58a11c820f2d5aa12aeea5d3
+Circuit 126 - intermediate_proof: 0x0011657fdc4e73138325eb32fbc6e8435ae5fb94716594ebf034466a1f2a7104
+Circuit 127 - intermediate_proof: 0x04d5e03a3ddd10f241d1ebb7d26ac259f7a7f1838963f50048faf2e3c380f016
+Circuit 128 - intermediate_proof: 0x0bda7b9dd3d145229a0ab5ae8e17ddf3775d04b0661fbdb5667f417c6fe29e9c
+Circuit 129 - intermediate_proof: 0x2fe77a2172fb06bd0d0cd26bf341dfe403e8a844ac99695a9f0c61cbc86df0ae
+Circuit 130 - intermediate_proof: 0x2c91eee11a2a9eb7bead5586bcfc94e3a455b3950991347dec491ac2a126066c
+Circuit 131 - intermediate_proof: 0x19148a401fecc9b409582c1e904cac62df69aac89aa14f8f866855f4d8f2a6cf
+Circuit 132 - intermediate_proof: 0x1e6d14d2c9dcb3d54781e8a713c39dcdf2ddd9ab746ea3bbd7c65a3d824b3340
+Circuit 133 - intermediate_proof: 0x2c60d1cf7a862917cae71888d7c27c081c436a956af5b49e14aab1dabd1d9899
+Circuit 134 - intermediate_proof: 0x0f9aff96aec15860075a79c4b1a3ee718b2ea087024145e996de28e69b1b0de9
+Circuit 135 - intermediate_proof: 0x1c36541681f0f3c2d31aa3ba0c3a023fa520befe280542d75800b4dc20a06eba
+Circuit 136 - intermediate_proof: 0x2ca5ebf8cdf50d8ec0c36b3dc5db19cdf25ab08ff58e98e6d18e266416042412
+Circuit 137 - intermediate_proof: 0x164550a804eae3c0d52d092b52a50986c961d22497460603a6858b64842739f4
+Circuit 138 - intermediate_proof: 0x0e941791ffdfcbdb15a0474df9eb2715e357d8e3da76ab62be1812df8ee87ec0
+Circuit 139 - intermediate_proof: 0x2e04fd452b7e3835a4e49bd4e882eda119dab4f95dfe3f6a98fcf445f2762838
+Circuit 140 - intermediate_proof: 0x0b7206df4073b84029b1491aedf0c3459e86e1c24024a201701cc15e2f1779ec
+Circuit 141 - intermediate_proof: 0x048a73035b56ce611362936bc1b6cb35569a6e002bfefe6457bb54081815288d
+Circuit 142 - intermediate_proof: 0x0ce6cce6c2fd8487c247d44d61e6ccb44b5a5a9de3aa39edc3fe0fe63fdc491b
+Circuit 143 - intermediate_proof: 0x2de937ea8cfa95e7880881b4b131cd6902bad935a8daba4f2608d7c771c9b107
+Circuit 144 - intermediate_proof: 0x0308b8ed84c6cf574de6f8dcddba56f5388283eafca8c5a83a96317041abf667
+Circuit 145 - intermediate_proof: 0x12ab59b607adbdaed1bbb6450b7ac87cd214b1710d585d24b8a9038992aef7f1
+Circuit 146 - intermediate_proof: 0x28ce2843aa3a1b923c6d817fc571a241b8521f1449051ddd3c43c6f99d2349d0
+Circuit 147 - intermediate_proof: 0x13cebb0bc004a8141dc875b93f40ace03950c092de769b8fd992d5706fa4cbd4
+Circuit 148 - intermediate_proof: 0x30612440cb2ae63076cb84eae08a054ce2690f86d02a434a785b735d1280149b
+Circuit 149 - intermediate_proof: 0x1d3b1be4d7fdd74e85ceeba34eda17596d3b2737b7ac73fa67d336ccfeddb071
+Aggregated Proof: 0xeb9cec8d1699b5c439fe68c321d9665a9f988d57b0f66630c484e9d7eafb3d08
+⏱ GKR Proof Generation Time: 11.54ms
+Aggregated Proof: 0xeb9cec8d1699b5c439fe68c321d9665a9f988d57b0f66630c484e9d7eafb3d08
+GKR Verification result: true
+Recursive Proof (32 bytes): 0xeb9cec8d1699b5c439fe68c321d9665a9f988d57b0f66630c484e9d7eafb3d08
+Individual Proofs (150 × 32 bytes):
+  Proof 0: 0x2b54e3cd34134f446ae23c211b33624554547abb697f3eed4b7e93c12ff91090
+  Proof 1: 0x2f546204ccb1b810d0ddfd41e57542ceaf2044afd1f0a50a1386a879f004df88
+  Proof 2: 0x1875f335de5baa7c40e98cd2143fd5f9c54e082e2040bc92d9f90003bc1b04a0
+  Proof 3: 0x0aca3f188de98050e5f09a00ea5b2bc80d94a03ee95e49b212fc6b807c4300cf
+  Proof 4: 0x18756abe8a76c3fc58dc0f867aee7a493f880f215c9ffcf53ba7302a62f1d4bb
+  Proof 5: 0x2d3c09aef39f83dccdff7b2d096dfb29bcc75114a2c95bdf54bc1dd2189b90ca
+  Proof 6: 0x1258c4a243f61cbfd9cfd591128949f812dedec4d9c88daf763b1b810aefcb70
+  Proof 7: 0x09021cfdfd541a189327383b0c16b648c0e3156c5134f4090984ca8590005bf2
+  Proof 8: 0x00ee7c7efff8cb60f6d6eadfee400bdff33b5c8774911edf7e8c125fa988939c
+  Proof 9: 0x0696e4160d0f9b1ae8398a192bad090ce2998739f38c43e7a204ad0ae10a5fe8
+  Proof 10: 0x26730281deecee850cbd08e97119a2a6e2b64f3eda796b681506f50b83b6d94a
+  Proof 11: 0x2bf63b60274eec3c964f1a3037a41eb57e4e0dc463753918c49b8a3d6dcb9e95
+  Proof 12: 0x08b6abd1676edb1301afca5bb27d69a74f970ce5b76f7367b4d17c9d561fb57e
+  Proof 13: 0x008870efa26b5bf814249ccf2d19d99b0e263dcd5950b02a42b2a9455c283545
+  Proof 14: 0x136044b64252931f1b11c7427f382b9c7529be9b5d5da334b66fe02da2041fbb
+  Proof 15: 0x25978bdf57eb02022bb6d96aed2d846a0516d259168645ab88883dc883e3bbee
+  Proof 16: 0x01e987bedb502974b04faf259244382be2e088f7e973fffe4ba2b1160c6867c6
+  Proof 17: 0x27eebb6e831e8bdca634ee7aa71404c61030763a6164896fc7d24edd844632df
+  Proof 18: 0x21b71c2ba6a741505ad4dc98d79302815ce2c25054c13ccefcc3b621eda1536f
+  Proof 19: 0x004e8c5fcef21887aa4989e3c78f44e73405eb4874939adf9b0fe053f38e9bc0
+  Proof 20: 0x01899f09ea30eb2cef9a9a7d1c06f90c176f52d29c8b4803f793446c2ef0b90f
+  Proof 21: 0x1562451365901d78c0b2ba9fcd473c4e207a87f27234ec207905be6d4ebf5a67
+  Proof 22: 0x09ad97ceb9b4450cf14907620b2ef715e4ebae4352f1d3dcaa025a01062b07df
+  Proof 23: 0x15e0959ae49d04d0a2f040ab3b3561f3c49d682ff6ef4208b65716a9fbd21ad7
+  Proof 24: 0x00412fdf0031ea1b00d6effd158c1832f61db810b769617884064ab7d8ffc0de
+  Proof 25: 0x181d54b1ad9650e0bb98d227dcabfa319e85d0406da153dcc5d51524f58d8370
+  Proof 26: 0x05e623c886d374cc43ab6e9076591357a280c708bc2d461582995a9c69ce07ce
+  Proof 27: 0x1adc34c6bc1d13ea4717f3ea128bcc6bd1f717feeed8f7773e9dfa1b94a006f7
+  Proof 28: 0x264c4820a0ffee00d6bc8786fdf0d28cbf045849514bfdf4c0edd835a1f0805d
+  Proof 29: 0x0d2dcfa9534b5a9f6dd56c3e77f7f5151a87074c62abbea2ac12884a165af8b2
+  Proof 30: 0x260395ea92803f35fb253a8a431a25e79f40b2e7cf210eed4ba6700c813c3dff
+  Proof 31: 0x27b6ca42458f0b5827041e79b9cb964ff9a8dc380e5639015c1c6951bb048595
+  Proof 32: 0x1ec45803c0e56cc2497ae1b4850f79cb579d5ba078ed432dc23fd0dfe574f829
+  Proof 33: 0x0b9562211a41d7ca7d3664dba7cf196b5a1993d351439fd105dc8f772ad545c0
+  Proof 34: 0x27c9db6ec410c5f2acbb69ecd16dd06217ff06d5e2b9a02cfd1eb8e1f9b3ee69
+  Proof 35: 0x1731f60ecd802478f5f19e7208e388418d7407ee433fda2dd4099e5237688dc8
+  Proof 36: 0x0d300b3a4430399aab29a94dbbf0d4e6fd699a32c238accec6a436441462b657
+  Proof 37: 0x270d45d948cd980978307ab263cdafb7ead31c04a44528806e82c7474957d2bf
+  Proof 38: 0x034a0de04901da7659eb38664236306226fdaa579c5a25852f0b1eab24e1232a
+  Proof 39: 0x28734eb17726c3ccd8fc398af8a9710ebed0f174d5024232cc267798037e37be
+  Proof 40: 0x248d69a195f00a0eeb5393898c1c51165a5fdea87a3a3a9450f989f4b238d8ca
+  Proof 41: 0x0bab592a6ff4fa005ece188841c057075269b63f8a26141c489e0b2eef5449dc
+  Proof 42: 0x25fc21bf2911ac39b7a479d3bda2becca4d2680335cb685dbff746b86b39ccdd
+  Proof 43: 0x155730bdc355c39b7f71009fb10644154539817b245b1835bb82ca18ca58a27f
+  Proof 44: 0x235f8b116adf9c427be6829705fd96b9ddf3f22fd90580cfda22fec05f23253d
+  Proof 45: 0x2a096a21bc63d16264befb8555d0437d4d404c33b5ecbe870ec0101a51f2c37f
+  Proof 46: 0x1fa85f9d488a7a61eb6958b2d5dd457cb278adbfa16a29c14c9119490b79eb27
+  Proof 47: 0x27727adc0a007f26c37b761e914b3621f201ba17bee423489ac9c72d6d038149
+  Proof 48: 0x2e4552f3b2fdde218d8a275f31472ed45a975332e9660eb9ea0999cc8222cf32
+  Proof 49: 0x2edd3c18f90904931a22c3373196d52de77330dc497e81e183247e67837cf378
+  Proof 50: 0x0e1c9b3595be7844a90535d0cef49554e4f425eaccd64808ee97a329d219e617
+  Proof 51: 0x048db29a142c5db28eeecd4fb7c2a5344cdd8f9a00d5e626669893a2dc8af92b
+  Proof 52: 0x2fe7d096c0153b7bd77435cbfa4a4df811f4eb2dd4173f4240237ccfc867846b
+  Proof 53: 0x09efdb932e2d0f090e81e20dc753748ad6008cc9487963f39db23cb0b68b623e
+  Proof 54: 0x23c1531b12c82b07d494991f6cdf754a1dca80e482d80bb9fb4c7a489d9c939c
+  Proof 55: 0x0a8ca5b8d829c01eb6c790d3cb94642ebd00c09abfff520c774aadf3861551bd
+  Proof 56: 0x149142e4d891178966fa1a98f5328a8a119918261fc4e183b35818b32c4aa51e
+  Proof 57: 0x2b4e0cc88fa2b9098c12699d0bcd0926fb86926b4a51c457151fc7de15d9f63e
+  Proof 58: 0x0dca9435782d3f18412a910fbf840fef4e8c950de26a031e88fbf050462fab27
+  Proof 59: 0x2a037fd8d9aaf817b3317cc509bb1daee26e8cf01b9622cee1c262e4db2ef187
+  Proof 60: 0x051e0f358c70b5addbc18b5a12a7b3ba749902aea063453501ce537296db3380
+  Proof 61: 0x22daf3715208780c834fd6af941bbf3dfff0d6696175a806c21ec941c8160a95
+  Proof 62: 0x0aed6c5b85f8face04034882a61598e3da2b0ead45ad8005b659146cb6f962c4
+  Proof 63: 0x2a1e3956426db07db556e346e536fb4089f86440d7afcf92b94431b487206d9b
+  Proof 64: 0x28f630e38a7bbcad5a753abce8c024407f9baa8c5a00550f3ffc22af8cbc5410
+  Proof 65: 0x20c44dcdf0eebd68069c1021dc19ddc2b886b77492c1329920f3221e12bcce4f
+  Proof 66: 0x2f51d8663c50a504cf50f50cd1f4a252a833e1ac6a639c5681d9ba06a26de435
+  Proof 67: 0x293a541d484e3666c6696e9a2abcde51ef362639659e04e1aad48769897bd9d9
+  Proof 68: 0x2bca0197994ab6f0602ff839c4c5c3ea2a3faa8918b81347a4a3d587e96946cb
+  Proof 69: 0x28d0288cc30a47154519a472dafcd5c5642d79278ea14329720af67b528e6a06
+  Proof 70: 0x200706eaabb7e8bb02b068a90f3ea400cb502bc68790ccd350f6e68c412bbb31
+  Proof 71: 0x03b782025fdd2ade72d30a4d2f29c79984a353e446c27ee13d823250b955af81
+  Proof 72: 0x17bd259781faa0a5d23cdbbe3fc221bb56c27d6675d02479bae08e594f5ba9cf
+  Proof 73: 0x12ad5171bcc9e8deb32c616719c36a311c7538c9a192aecbda235ded6fd9e133
+  Proof 74: 0x051fb58fd3bb1205e7f0013a78d3510ef116139090573789dd2b94d541a420d1
+  Proof 75: 0x1cc607412cf0ee32746fb8518d8c4b3108ef1622a3fa8aae41bfb7059f8d68a7
+  Proof 76: 0x20377e29444144ce02dcbf7676862a24acfe4f1f6d834da8cb7cf958374a3019
+  Proof 77: 0x1ea95fc037102db0336d3e8408e475f9a6c4d47188fa4740b56c5671ba8678f4
+  Proof 78: 0x113a728e9932f94ec17bb8b9fc7a29407c7a6642435ddd3ac034b1d45a7c4c6c
+  Proof 79: 0x0b83c89f6dd8793217cc83901e3c21da3731190bda0564e0093c6118861e3ebb
+  Proof 80: 0x0ed078e56c813b76e6752422e8ac899223dbef769d32e064b2b221f6524936bc
+  Proof 81: 0x19045b330ea76fb66a83976add064ba89068c84eb9e8bffee661ed7cff103525
+  Proof 82: 0x2f939ab29993eabde81e49f8980728211b7378d934676ec243c31819f9d2e287
+  Proof 83: 0x2fde19489de0c97407df57a4eadf9dc3c287c9ec834f2f6b47d109beeb9d1d8a
+  Proof 84: 0x2d3b0ba43ce6951927a24a4c030b0a678f11e4e54194b6d00a40b9f4c8c79ef4
+  Proof 85: 0x093026b057a515c2c57389677225377944bbddb03a417b7a7efb24dee941631a
+  Proof 86: 0x1ed5af0b4df279ca70f68f424d031081863dd2ba221f8626d6c7ac0b1adf8322
+  Proof 87: 0x0a215077604c0ef8e270c3fe4d500326d34406f07172816bec0e8deaf143db73
+  Proof 88: 0x1df2d66af05d04bd15674790a6825da4faf110d13775ff5b61b832d8812d7547
+  Proof 89: 0x03957442ee121d7ff3d15d9e667836b882dd30806cd6be7e5af2f24fe99822a2
+  Proof 90: 0x0c759a96f6da9bd8ed90d45c8a1d447376b0c69d263dc3a6772398fd0540d221
+  Proof 91: 0x16b9997e16708f78b8dc4e13dadeba3775041b6e0be5b88793e2fa6436cd3d11
+  Proof 92: 0x17569b87aa6ebcc6ec88397ccbfba50aed2fa0eb841ded9e80c3fe7bf5473025
+  Proof 93: 0x007de0fdf56db250a2a9b6bd2cc115d2623e1993c8bc9da062902f91add20840
+  Proof 94: 0x0965c1e3b21a658b06bd21e9f4711fd28b677a4f1c21126b3715cc78971a9ec2
+  Proof 95: 0x1be21ddccda6c17891175bc8a29c71e9df2759ea3077ce0f2cb6a819c4107926
+  Proof 96: 0x1b14dc877565159038256dde3dbecf4f0b2ca556a20ff7f523c12854d802c741
+  Proof 97: 0x0bcd59b283ac7188a62179ae6f8ce96445a8af3eb50969d7041eec7732c354d6
+  Proof 98: 0x0805e068d1a2af0d59db28b7bf49d415166388a9935ef69609beb5d70e75900b
+  Proof 99: 0x1467ecdee427f42e37e9efbdc3ca48490139f25e80cb840a959e0db2a0c24c58
+  Proof 100: 0x0ad955079307a2e2763a179f88376f3842f22a7f2c351a95cce8b9a0e500679f
+  Proof 101: 0x2c6ef2274ad77f9c7e216d48977d3ef763d753a72c5b83df24074c51394bf4c6
+  Proof 102: 0x1fff6c5f6cf4be4566b2dd5caaba5f19cfe7605647ffe89d7f62427101263c03
+  Proof 103: 0x0f77a8611bbb2cf48108581ed0d6973fd96220a72d40d7f2a15188975b5396fe
+  Proof 104: 0x2e6abcd8a09aa664768bf36cbb239f2de1cce10f44435f7bef046da7ad762ebc
+  Proof 105: 0x1afeb9d0ce6a27b9013c2bbfba3fda32b57e27b8ee23243e2a9928d8af0b5a25
+  Proof 106: 0x2ec19ee30a589a15cae12885805bfa1d87a36fcb775fc06e605bfec855a1c7b5
+  Proof 107: 0x2d040501f67b1d774de50cd9621db848865e629d1d5133931e3ef8f8bd3e1893
+  Proof 108: 0x1819988e17d51d1f52f7e601d237cfe4ce025558d69e59f56c13f7cec3fdbcfd
+  Proof 109: 0x08635d86430f590937f8a7bd489465f892720112e5fe70a6ae55eaa4c00af8eb
+  Proof 110: 0x074d1f5af0bfb4de0575c2dd298925eb863dc98dc1e6573fa719a2c0658231cf
+  Proof 111: 0x10832804d357fc16457103ee92e7848a2518e9c28162fc289ddc99aa91d0c108
+  Proof 112: 0x09eab65e9c5ea52747603fc920019cbc09e15b107cf6586c89f4a8deaeb5d676
+  Proof 113: 0x2d42888443e0a8d614beb0ff3542146d220c1f951ac26274addb86150597a4dc
+  Proof 114: 0x06b6d9897c451110805a22f8c175a8656403224c4a0885aa2a3e1a3791e97b14
+  Proof 115: 0x2cb803b53ea8f771f93e5c9896e00a64d98fa744ea7608445dd910129bd51b82
+  Proof 116: 0x279613eba6e22adbba89f7258e96ff75afa9a266d56d3690514d015fd336624c
+  Proof 117: 0x264b5b28fc188934d395f68e41dd209f5b265751a8b9281631d38f6fcf6154f3
+  Proof 118: 0x274e976cfcf9dd01cadab2f98ff8ee47276665c2a797ce42dbbbe6290d69597c
+  Proof 119: 0x27c310953eac38e30ae24589b486d95e4116cc32c54d35613caa2fa2e5e12a5f
+  Proof 120: 0x0315c0b472dce866fa62f21cc357ca653c9c6ccf1c276a8c311b404cf66dff9a
+  Proof 121: 0x08b1d580b86c365bf495a9b581c099e6c8644a936f1a504c669218de460bd88a
+  Proof 122: 0x0bdf5f6bc3a62af91c222e56b0471a703f71d24cddec8032788ae160836c1bde
+  Proof 123: 0x0d33c6334a1402604f0269aba8182dfff3c54ef32cdc150914267dae063abdf0
+  Proof 124: 0x060ce8d6ca1894a08a2731d263f71c6c9fe6f77041c345fb22bbcf13dd181fe9
+  Proof 125: 0x2c04cc47d36334a0e4ea3c4f8137d3195fac8f95efc78af0a31248dbad97175f
+  Proof 126: 0x19c7ea5515d5387051c3da881d2d0e75c58c852751994978cb20d9a42e936a5c
+  Proof 127: 0x24020b0c1cf7bb8dd342b4f96c90b6d8a268caafd7ea1e3637da1aa0d1922f43
+  Proof 128: 0x03923da1958c766bd29dbc794ba0ebcd82797df7fa03129dd1d2664af2d5b31a
+  Proof 129: 0x036411596ea6e9497ae93c5c3c330ed69a6346878473962c71432207413e838c
+  Proof 130: 0x14a6d0e9c51ed2d7369e868809e50ee947944198b1edeecfae9edb58c8e573c2
+  Proof 131: 0x1e20c8ac7a338b254b4198804a466f9e11d40131eaf3e38484fbf5eb96bd3db4
+  Proof 132: 0x13927ecf2074d00b5635f2b2de23db9a42eb4df0dd81603a3119d2173d7d794f
+  Proof 133: 0x0962db01bc93208c049829278f73e481c519b4ccdbfaa00b3124e9dcac0ba2b5
+  Proof 134: 0x141a580eb647a061121818420d6387e58a7d3d95c9127d8256c6943181237647
+  Proof 135: 0x065f800039f2489e00b611b2099c5a3279cd83d7cc597983a246461bdcf33c15
+  Proof 136: 0x1d72846b04b9da82129c1233b10ae67bd4bf1f8d83e30d35557f59795f0b24e9
+  Proof 137: 0x2de1252f5104ae2be9bc8f500796c8e3e7dc5e6c863a70d6ea3f30288e79342e
+  Proof 138: 0x1c60b56536a0e00d9d9da8cfda28238e18a49dc6fa22634cd2c35097d19a4fad
+  Proof 139: 0x28f314a734b3b19c98d69be50dc82cc3aba17cc4581907744c064ace1dd1603e
+  Proof 140: 0x1a07841a0284d191051e6ba86cfcf92ff866c7387d27d80afde9e246aca12c4c
+  Proof 141: 0x19389e9dafa814e84ed640957e6394b4694faae75eb38fdd5007aa2ab15899ed
+  Proof 142: 0x22a1b8f6e88bc4fda086671ce2776f76d31d2820533c158d961d50a44bbd17c9
+  Proof 143: 0x21c4e5a0fd2cd37268fd89f97b52b1fa87a0247d3ac65c375bf7e265da751ea1
+  Proof 144: 0x2464434ddaf142eaaf4885fbe9f41335ee83aa37e30adbd927874b67522a3ccb
+  Proof 145: 0x2a52045db3483326eaa8c3135b28bb52ff2835d300083053d381b94a2931e725
+  Proof 146: 0x0a2c2bfe6e0761de69ba537cb2e3fce35af49efec7797d0be29e816a2b715cb7
+  Proof 147: 0x15c331d6b9bae5130cd4b522b058b5a4d5fb39556487963f23f61c2dfc48a3d9
+  Proof 148: 0x213aee3100f8e6426b6fe78b523f2d823abbc2f071670d9ba9e754ce4eb58337
+  Proof 149: 0x1c15312344a60f36ec61f059980771bf889eb77b78beeab36650cf9290709992
+===== Test Summary =====
+--------------------------------------------------------------------------------
+| Test Name            | Circuits     | Gen Time (ms)      | Verify Time (ms)   | Valid    |
+--------------------------------------------------------------------------------
+| Large Batch Test     | 150          | 11.55              | 2.34               | Yes      |
+--------------------------------------------------------------------------------
+All tests passed successfully!
+Proofs written to proofs.txt

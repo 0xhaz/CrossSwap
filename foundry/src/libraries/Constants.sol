@@ -8,7 +8,7 @@ import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.s
 
 library Constants {
     bytes internal constant ZERO_BYTES = bytes("");
-    uint256 internal constant TREE_DEPTH = 32;
+    uint256 internal constant TREE_DEPTH = 20;
 
     /// @notice Data passed during unlocking liquidity callback, includes sender and key info
     struct CallbackData {
@@ -26,11 +26,11 @@ library Constants {
     }
 
     /// Struct holding zk-SNARK proof data
-    struct ZkProofData {
-        uint256[2] proofA;
-        uint256[2][2] proofB;
-        uint256[2] proofC;
-        uint256[] publicSignals;
+    struct GKRProofData {
+        bytes proof; // 32-byte GKR proof
+        bytes[] previousProofs; // Array of previous 32-byte proofs
+        int256 amount0; // Public signal: amount0
+        int256 amount1; // Public signal: amount1
     }
 
     /// Unified struct for liquidity execution (both swaps & adding liquidity)
@@ -43,7 +43,7 @@ library Constants {
         address destinationHook;
         uint256 liquidity;
         uint160 sqrtPriceX96;
-        ZkProofData zkProof;
+        GKRProofData gkrProof;
         bool isSwap;
         bool isCrossChain;
     }
@@ -61,6 +61,7 @@ library Constants {
         int24 tickUpper;
         bool isSwap;
         bytes zkProof;
+        uint256 strategyId;
     }
 }
 
@@ -105,12 +106,14 @@ library Events {
     /// @dev The token amount that was received
     event MessageReceived(
         bytes payload,
-        uint64 srcChainId,
+        uint16 indexed srcChainId,
+        address indexed srcAddress,
         address sender,
         address token0,
         uint256 amount0,
         address token1,
-        uint256 amount1
+        uint256 amount1,
+        uint64 nonce
     );
 
     /// @notice Event emitted when there is a change in existing strategy

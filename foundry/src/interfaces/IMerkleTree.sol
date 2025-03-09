@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.26;
 
-uint256 constant TREE_DEPTH = 32;
+uint256 constant TREE_DEPTH = 20;
 
 /// @title Interface for MerkleTree
 
@@ -16,4 +16,6 @@ interface IMerkleTree {
         returns (bool);
 
     function getMerkleRoot() external view returns (bytes32);
+
+    function getCurrentIndex() external view returns (uint256);
 }

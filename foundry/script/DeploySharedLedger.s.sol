@@ -10,10 +10,17 @@ contract DeploySharedLedger is Script {
     function run() external returns (address) {
         DeployZKVerifier deployZkVerifier = new DeployZKVerifier();
         address zkVerifier = deployZkVerifier.run();
+
+        DeployMerkleTree deployMerkleTree = new DeployMerkleTree();
+        address stateTree = deployMerkleTree.run();
         vm.startBroadcast();
 
-        SharedLiquidityLedger deployLedger = new SharedLiquidityLedger(zkVerifier);
+        SharedLiquidityLedger deployLedger = new SharedLiquidityLedger(zkVerifier, stateTree);
         address ledger = address(deployLedger);
+
+        bytes32 stateRoot = deployLedger.getStateRoot();
+        console2.log("Initial State Root:");
+        console2.logBytes32(stateRoot);
 
         console2.log("Shared Ledger deployed at address:", address(ledger));
         vm.stopBroadcast();

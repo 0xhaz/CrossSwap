@@ -4,10 +4,17 @@ pragma solidity ^0.8.26;
 import {IMerkleTree} from "./IMerkleTree.sol";
 import {IZKVerifier} from "./IZKVerifier.sol";
 
-uint256 constant TREE_DEPTH = 32;
+uint256 constant TREE_DEPTH = 20;
 
 interface ISharedLiquidityLedger is IMerkleTree, IZKVerifier {
-    function updateLiquidityState(uint256 chainId, bytes32 newStateRoot, bytes memory zkProof) external;
+    function updateLiquidityState(
+        uint256 chainId,
+        bytes32 newStateRoot,
+        bytes memory zkProof,
+        bytes[] memory previousProofs,
+        int256 amount0,
+        int256 amount1
+    ) external;
 
     function getLatestLiquidityState(uint256 chainId) external view returns (bytes32);
 
@@ -25,20 +32,4 @@ interface ISharedLiquidityLedger is IMerkleTree, IZKVerifier {
     function getMerkleRoot() external view returns (bytes32);
 
     function stateTree() external view returns (IMerkleTree);
-
-    function currentIndex() external view returns (uint256);
-
-    function verifyLiquidityProof(
-        uint256[2] memory proofA,
-        uint256[2][2] memory proofB,
-        uint256[2] memory proofC,
-        uint256[4] memory publicSignals
-    ) external view returns (bool);
-
-    function verifySwapProof(
-        uint256[2] memory proofA,
-        uint256[2][2] memory proofB,
-        uint256[2] memory proofC,
-        uint256[5] memory publicSignals
-    ) external view returns (bool);
 }

@@ -26,7 +26,6 @@ import {ZKVerifier} from "src/zk/ZKVerifier.sol";
 import {PoseidonHasherLibrary} from "src/libraries/PoseidonHasherLib.sol";
 import {ISharedLiquidityLedger} from "src/interfaces/ISharedLiquidityLedger.sol";
 import {IMerkleTree} from "src/interfaces/IMerkleTree.sol";
-// import {CCLib} from "src/libraries/CCLib.sol";
 import {console2} from "forge-std/Test.sol";
 
 abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLedger {
@@ -46,7 +45,7 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
     // Authorized user
     address public authorizedUser_;
 
-    uint256 public constant TREE_DEPTH = 32;
+    uint256 public constant TREE_DEPTH = 20;
 
     ISharedLiquidityLedger public sharedLiquidityLedger;
     IZkLightClient public zkClient;
@@ -79,7 +78,7 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
         address sharedLiquidityLedger_,
         uint256 hookChainId
     ) BaseHook(poolManager) {
-        authorizedUser = authorizedUser_;
+        authorizedUser_ = authorizedUser;
         zkClient = IZkLightClient(zkClient_);
         sharedLiquidityLedger = ISharedLiquidityLedger(sharedLiquidityLedger_);
         hookChainId_ = hookChainId;
@@ -180,12 +179,15 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
                         OVERRIDE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function updateLiquidityState(uint256 chainId, bytes32 newStateRoot, bytes memory zkProof)
-        public
-        override
-        onlyAuthorizedUser
-    {
-        sharedLiquidityLedger.updateLiquidityState(chainId, newStateRoot, zkProof);
+    function updateLiquidityState(
+        uint256 chainId,
+        bytes32 newStateRoot,
+        bytes memory zkProof,
+        bytes[] memory previousProofs,
+        int256 amount0,
+        int256 amount1
+    ) public override {
+        sharedLiquidityLedger.updateLiquidityState(chainId, newStateRoot, zkProof, previousProofs, amount0, amount1);
     }
 
     function getLatestLiquidityState(uint256 chainId) public view override returns (bytes32) {
@@ -226,8 +228,12 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
         return zkClient.sendMessage(dstChainId, dstHook, payload);
     }
 
-    function zkReceive(uint256 srchChainId, address srcAddress, uint64 nonce, bytes memory payload) external override {
-        zkClient.zkReceive(srchChainId, srcAddress, nonce, payload);
+    function zkReceive(uint16 srcChainId, address srcAddress, uint64 nonce, bytes memory payload)
+        external
+        virtual
+        override
+    {
+        zkClient.zkReceive(srcChainId, srcAddress, nonce, payload);
     }
 
     function estimateFee(uint16 dstChainId) public view override returns (uint256) {
@@ -238,25 +244,52 @@ abstract contract CrossSwapCore is BaseHook, IZkLightClient, ISharedLiquidityLed
         return sharedLiquidityLedger.stateTree();
     }
 
-    function currentIndex() public view override returns (uint256) {
-        return sharedLiquidityLedger.currentIndex();
+    function getCurrentIndex() public view override returns (uint256) {
+        return sharedLiquidityLedger.getCurrentIndex();
     }
 
     function verifyLiquidityProof(
-        uint256[2] memory proofA,
-        uint256[2][2] memory proofB,
-        uint256[2] memory proofC,
-        uint256[4] memory publicSignals
-    ) external view override returns (bool) {
-        return sharedLiquidityLedger.verifyLiquidityProof(proofA, proofB, proofC, publicSignals);
+        bytes calldata proof,
+        bytes[] calldata previousProofs,
+        uint256 amount0,
+        uint256 amount1
+    ) external override returns (bool) {
+        return sharedLiquidityLedger.verifyLiquidityProof(proof, previousProofs, amount0, amount1);
     }
 
-    function verifySwapProof(
-        uint256[2] memory proofA,
-        uint256[2][2] memory proofB,
-        uint256[2] memory proofC,
-        uint256[5] memory publicSignals
-    ) external view override returns (bool) {
-        return sharedLiquidityLedger.verifySwapProof(proofA, proofB, proofC, publicSignals);
+    function verifySwapProof(bytes calldata proof, bytes[] calldata previousProofs, uint256 amount0, uint256 amount1)
+        external
+        override
+        returns (bool)
+    {
+        return sharedLiquidityLedger.verifySwapProof(proof, previousProofs, amount0, amount1);
+    }
+
+    /**
+     * @notice Returns the address of the token vault for bridging
+     * @return vault Address of the token vault
+     */
+    function tokenVault() external view override returns (address) {
+        return zkClient.tokenVault();
+    }
+
+    /**
+     * @notice Bridges tokens to the destination chain
+     * @param token Address of the token to bridge
+     * @param amount Amount of tokens to bridge
+     * @param dstChainId Destination chain ID
+     */
+    function bridgeToken(address token, uint256 amount, uint16 dstChainId) external override {
+        zkClient.bridgeToken(token, amount, dstChainId);
+    }
+
+    /**
+     * @notice Unlocks or mints tokens on the destination chain
+     * @param token Address of the token to unlock
+     * @param amount Amount of tokens to unlock
+     * @param srcChainId Source chain ID
+     */
+    function unlockToken(address token, uint256 amount, uint16 srcChainId) external override {
+        zkClient.unlockToken(token, amount, srcChainId);
     }
 }

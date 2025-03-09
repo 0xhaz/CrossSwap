@@ -1,79 +1,182 @@
-use expander_compiler::frontend::{
-    Define, Config, Variable, BasicAPI, API as RootBuilder,
-};
-use expander_compiler::circuit::config::BN254Config;
-use expander_compiler::circuit::ir::source::Irc;
-use circuit_std_rs::poseidon_m31::*;
-use expander_compiler::frontend::internal::DumpLoadVariables; 
+use expander_compiler::frontend::{Define, Config, BasicAPI, API as RootBuilder};
 use expander_transcript::Proof;
-use rand::{thread_rng, Rng};
-use expander_compiler::field::FieldArith;
+use expander_compiler::field::BN254;
+use crate::proof::{generate_gkr_proof, verify_gkr_proof, u256_to_bn254, CircuitPublicOutputs, GKRProver};
+use ark_bn254::Fr;
+use expander_compiler::frontend::extra::UnconstrainedAPI;
+use crate::libraries::types::{U256, U160, I256};
+use crate::libraries::{TickMath, SqrtPriceMath};
+use arith::FieldForECC;
+use std::any::Any;
 
+#[derive(Clone, Debug)]
+pub struct BalanceDelta {
+    pub amount0: I256,
+    pub amount1: I256,
+}
 
+#[derive(Clone)]
 pub struct LiquidityCircuit {
-    pub user_balance: Variable,
-    pub liquidity_added: Variable,
-    pub pool_total_liquidity: Variable,
-    pub expected_new_total: Variable,
+    pub owner: U256,
+    pub tick_lower: i32,
+    pub tick_upper: i32,
+    pub liquidity_delta: i128,
+    pub tick_spacing: i32,
+    pub salt: [u8; 32],
+    pub sqrt_price_current_x96: U256,
+    pub hook_data: Vec<u8>,
 }
 
-impl<C: Config> Define<C> for LiquidityCircuit {
+impl<C: Config> Define<C> for LiquidityCircuit
+where
+    C::CircuitField: From<BN254> + PartialOrd + Clone + FieldForECC,
+{
     fn define(&self, builder: &mut RootBuilder<C>) {
-        let sum = builder.add(self.user_balance, self.liquidity_added); 
-        builder.assert_is_equal(sum, self.expected_new_total); 
+        let _owner = builder.constant(u256_to_bn254(self.owner));
+        let tick_lower = builder.constant(BN254::from(self.tick_lower as u32));
+        let tick_upper = builder.constant(BN254::from(self.tick_upper as u32));
+        let liquidity_delta = builder.constant(u256_to_bn254(U256::from(self.liquidity_delta.abs() as u128)));
+        let tick_spacing = builder.constant(BN254::from(self.tick_spacing as u32));
+        let salt = builder.constant(u256_to_bn254(U256::from_little_endian(&self.salt)));
+        let sqrt_price_current_x96 = builder.constant(u256_to_bn254(self.sqrt_price_current_x96));
+        let decimals = U256::from(10).pow(U256::from(18));
+
+        let zero = builder.constant(BN254::zero());
+        let one = builder.constant(BN254::one());
+        let min_tick = builder.constant(BN254::from(887272u32));
+        let max_tick = builder.constant(BN254::from(887272u32));
+        let min_tick_signed = builder.constant(BN254::from((-887272i32) as u32));
+
+        let is_lower_valid = builder.unconstrained_lesser_eq(min_tick_signed, tick_lower);
+        let is_upper_valid = builder.unconstrained_lesser_eq(tick_upper, max_tick);
+        builder.assert_is_equal(is_lower_valid, one);
+        builder.assert_is_equal(is_upper_valid, one);
+
+        let is_lower_less_upper = builder.unconstrained_lesser_eq(tick_lower, tick_upper);
+        let tick_diff = builder.sub(tick_upper, tick_lower);
+        let is_lower_eq_upper = builder.is_zero(tick_diff);
+        let one_minus_eq = builder.sub(one, is_lower_eq_upper);
+        let is_strictly_less = builder.mul(is_lower_less_upper, one_minus_eq);
+        builder.assert_is_equal(is_strictly_less, one);
+
+        let tick_lower_mod = builder.div(tick_lower, tick_spacing, false);
+        let tick_lower_aligned = builder.mul(tick_lower_mod, tick_spacing);
+        let tick_lower_diff = builder.sub(tick_lower, tick_lower_aligned);
+        let is_lower_aligned = builder.is_zero(tick_lower_diff);
+        builder.assert_is_equal(is_lower_aligned, one);
+
+        let tick_upper_mod = builder.div(tick_upper, tick_spacing, false);
+        let tick_upper_aligned = builder.mul(tick_upper_mod, tick_spacing);
+        let tick_upper_diff = builder.sub(tick_upper, tick_upper_aligned);
+        let is_upper_aligned = builder.is_zero(tick_upper_diff);
+        builder.assert_is_equal(is_upper_aligned, one);
+
+        let sqrt_price_lower_x96 = TickMath::get_sqrt_price_at_tick(self.tick_lower).unwrap_or(U160::zero());
+        let sqrt_price_upper_x96 = TickMath::get_sqrt_price_at_tick(self.tick_upper).unwrap_or(U160::zero());
+
+        let adjusted_liquidity_delta = if !self.hook_data.is_empty() && self.hook_data == vec![1] {
+            self.liquidity_delta + (self.liquidity_delta.abs() / 100)
+        } else {
+            self.liquidity_delta
+        };
+
+        let amount0_unscaled = SqrtPriceMath::get_amount0_delta_signed(sqrt_price_lower_x96, sqrt_price_upper_x96, adjusted_liquidity_delta).unwrap_or(I256::zero());
+        let amount1_unscaled = SqrtPriceMath::get_amount1_delta_signed(sqrt_price_lower_x96, sqrt_price_upper_x96, adjusted_liquidity_delta).unwrap_or(I256::zero());
+
+        let amount0 = amount0_unscaled * I256::from(decimals);
+        let amount1 = amount1_unscaled * I256::from(decimals);
+
+        let principal_delta = BalanceDelta { amount0, amount1 };
+        let fees_accrued = BalanceDelta { amount0: I256::zero(), amount1: I256::zero() };
+
+        let caller_delta = if self.hook_data == vec![2] {
+            BalanceDelta {
+                amount0: principal_delta.amount0 * I256::from(99i128) / I256::from(100i128),
+                amount1: principal_delta.amount1 * I256::from(99i128) / I256::from(100i128),
+            }
+        } else {
+            principal_delta
+        };
+
+        let sqrt_price_lower_x96_field = builder.constant(u256_to_bn254(U256::from(sqrt_price_lower_x96)));
+        let sqrt_price_upper_x96_field = builder.constant(u256_to_bn254(U256::from(sqrt_price_upper_x96)));
+        let sqrt_price_current_x96_field = builder.constant(u256_to_bn254(self.sqrt_price_current_x96));
+        let is_in_range_lower = builder.unconstrained_lesser_eq(sqrt_price_lower_x96_field, sqrt_price_current_x96_field);
+        let is_in_range_upper = builder.unconstrained_lesser_eq(sqrt_price_current_x96_field, sqrt_price_upper_x96_field);
+        let is_in_range = builder.mul(is_in_range_lower, is_in_range_upper);
+
+        // println!("Computed:");
+        // println!("  sqrt_price_lower_x96: {:?}", sqrt_price_lower_x96);
+        // println!("  sqrt_price_upper_x96: {:?}", sqrt_price_upper_x96);
+        // println!("  caller_delta: amount0={:?}, amount1={:?}", caller_delta.amount0, caller_delta.amount1);
+        // println!("  fees_accrued: amount0={:?}, amount1={:?}", fees_accrued.amount0, fees_accrued.amount1);
     }
 }
 
-fn variable_to_u32<C: Config>(api: &mut RootBuilder<C>, v: &Variable) -> u32 {
-    match api.constant_value(*v) {
-        Some(value) => value.as_u32_unchecked(), 
-        None => panic!("Failed to extract u32 from Variable"),
+impl CircuitPublicOutputs for LiquidityCircuit {
+    fn as_any(&self) -> &dyn Any {
+        self
     }
+    fn get_public_outputs(&self) -> Vec<U256> {
+        let decimals = U256::from(10).pow(U256::from(18));
+        let sqrt_price_lower_x96 = TickMath::get_sqrt_price_at_tick(self.tick_lower).unwrap_or(U160::zero());
+        let sqrt_price_upper_x96 = TickMath::get_sqrt_price_at_tick(self.tick_upper).unwrap_or(U160::zero());
+
+        let adjusted_liquidity_delta = if !self.hook_data.is_empty() && self.hook_data == vec![1] {
+            self.liquidity_delta + (self.liquidity_delta.abs() / 100)
+        } else {
+            self.liquidity_delta
+        };
+
+        let amount0_unscaled = SqrtPriceMath::get_amount0_delta_signed(sqrt_price_lower_x96, sqrt_price_upper_x96, adjusted_liquidity_delta).unwrap_or(I256::zero());
+        let amount1_unscaled = SqrtPriceMath::get_amount1_delta_signed(sqrt_price_lower_x96, sqrt_price_upper_x96, adjusted_liquidity_delta).unwrap_or(I256::zero());
+
+        let amount0 = amount0_unscaled * I256::from(decimals);
+        let amount1 = amount1_unscaled * I256::from(decimals);
+
+        let principal_delta = BalanceDelta { amount0, amount1 };
+        let caller_delta = if self.hook_data == vec![2] {
+            BalanceDelta {
+                amount0: principal_delta.amount0 * I256::from(99i128) / I256::from(100i128),
+                amount1: principal_delta.amount1 * I256::from(99i128) / I256::from(100i128),
+            }
+        } else {
+            principal_delta
+        };
+
+        vec![caller_delta.amount0.abs(), caller_delta.amount1.abs()]
+    }
+
+   
 }
+
+impl GKRProver for LiquidityCircuit {}
 
 pub fn generate_liquidity_proof(
-    user_balance: u32,
-    liquidity_added: u32,
-    pool_total_liquidity: u32,
-    expected_new_total: u32,
+    owner: U256,
+    tick_lower: i32,
+    tick_upper: i32,
+    liquidity_delta: i128,
+    tick_spacing: i32,
+    salt: [u8; 32],
+    sqrt_price_current_x96: U256,
+    hook_data: Vec<u8>,
 ) -> Proof {
-    let mut rng = thread_rng();
-
-    let (mut api, _input_vars, _public_vars) = RootBuilder::<BN254Config>::new(0, 0); // ✅ FIX: Use `new()`
-
     let circuit = LiquidityCircuit {
-        user_balance: api.constant(user_balance),
-        liquidity_added: api.constant(liquidity_added),
-        pool_total_liquidity: api.constant(pool_total_liquidity),
-        expected_new_total: api.constant(expected_new_total),
+        owner,
+        tick_lower,
+        tick_upper,
+        liquidity_delta,
+        tick_spacing,
+        salt,
+        sqrt_price_current_x96,
+        hook_data,
     };
-
-    circuit.define(&mut api);
-
-    let proof_data: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
-    Proof { bytes: proof_data }
+    let previous_proofs = vec![Proof { bytes: vec![0xAA; 32] }];
+    let (proof, _all_proofs) = generate_gkr_proof(&[&circuit as &dyn GKRProver], &previous_proofs);
+    proof
 }
 
-pub fn verify_liquidity_proof(proof: &Proof) -> bool {
-    let (mut api, _input_vars, _public_vars) = RootBuilder::<BN254Config>::new(0, 0); // ✅ FIX
-
-    let poseidon_params = PoseidonM31Params::new(
-        &mut api,
-        POSEIDON_M31X16_RATE,
-        16,
-        POSEIDON_M31X16_FULL_ROUNDS,
-        POSEIDON_M31X16_PARTIAL_ROUNDS
-    );
-
-    let proof_vars: Vec<Variable> = proof.bytes.iter()
-        .map(|&b| api.constant(b as u32)) 
-        .collect();
-
-    let hash_result = poseidon_params.hash_to_state(&mut api, &proof_vars);
-
-    proof.bytes.ends_with(
-        &hash_result.iter()
-            .map(|v| variable_to_u32::<BN254Config>(&mut api, v).to_le_bytes()[0]) 
-            .collect::<Vec<u8>>(),
-    )
+pub fn verify_liquidity_proof(proof: &Proof, previous_proofs: &[Proof]) -> bool {
+    verify_gkr_proof(proof, previous_proofs)
 }

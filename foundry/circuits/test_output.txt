@@ -1,0 +1,197 @@
+
+running 69 tests
+test libraries::bit_math::tests::test_most_significant_bit ... ok
+test libraries::bit_math::tests::test_least_significant_bit_zero ... ok
+test libraries::bit_math::tests::test_most_significant_bit_max ... ok
+test libraries::bit_math::tests::test_least_significant_bit ... ok
+test libraries::bit_math::tests::test_most_significant_bit_zero ... ok
+test libraries::bit_math::tests::test_least_significant_bit_sparse ... ok
+test libraries::bit_math::tests::test_field_most_significant_bit_zero ... ok
+test libraries::bit_math::tests::test_field_least_significant_bit_zero ... ok
+test libraries::liquidity_math::tests::test_add_delta_negative ... ok
+test libraries::liquidity_math::tests::test_add_delta_positive ... ok
+test libraries::fixed_point::tests::test_fixed_point ... ok
+test libraries::liquidity_math::tests::test_add_delta_overflow ... ok
+test libraries::liquidity_math::tests::test_add_delta_underflow ... ok
+test libraries::fixed_point::tests::test_fixed_point_q128 ... ok
+test libraries::safecast::tests::test_to_uint128_from_i128 ... ok
+test libraries::safecast::tests::test_to_uint160 ... ok
+test libraries::safecast::tests::test_to_int128 ... ok
+test libraries::safecast::tests::test_to_int128_from_uint256 ... ok
+test libraries::safecast::tests::test_to_uint128 ... ok
+test libraries::safecast::tests::test_to_int256 ... ok
+test libraries::sqrt_price_math::tests::test_get_amount0_delta ... ok
+test libraries::sqrt_price_math::tests::test_get_amount0_delta_increasing_price ... ok
+test libraries::sqrt_price_math::tests::test_get_amount0_delta_low_liquidity ... ok
+test libraries::sqrt_price_math::tests::test_get_amount1_delta ... ok
+test libraries::tick_math::tests::test_max_usable_tick ... ok
+test libraries::tick_math::tests::test_min_usable_tick ... ok
+test libraries::unsafe_math::tests::test_simple_mul_div ... ok
+test libraries::unsafe_math::tests::test_div_rounding_up ... ok
+test libraries::tick_math::tests::test_get_sqrt_price_at_tick ... ok
+test libraries::swap_math::tests::tests::test_compute_swap_step_exact_out ... ok
+test libraries::swap_math::tests::tests::test_compute_swap_step_boundaries ... ok
+test libraries::tick_math::tests::test_get_tick_at_sqrt_price ... ok
+GKR Verification result: false
+test tests::cross_chain_tests::tests::test_cross_chain_proof_invalid_hash ... ok
+Verification failed: Proof is empty
+test tests::gkr_tests::tests::test_gkr_empty_proof ... ok
+test libraries::full_math::tests::test_mul_div ... ok
+test libraries::full_math::tests::test_mul_div_rounding_up ... ok
+test libraries::bit_math::tests::test_field_most_significant_bit_non_zero ... ok
+test libraries::bit_math::tests::test_field_least_significant_bit_non_zero ... ok
+GKR Verification result: false
+test tests::gkr_tests::tests::test_liquidity_proof_invalid_hash ... ok
+⏱ GKR Proof Generation Time: 769.79µs
+GKR Verification result: true
+test tests::gkr_tests::tests::test_gkr_proof_verification ... ok
+⏱ GKR Proof Generation Time: 587.04µs
+⏱ GKR Proof Generation Time: 794.79µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 539.13µs
+GKR Verification result: true
+test tests::gkr_tests::tests::test_liquidity_proof_generation ... ok
+⏱ GKR Proof Generation Time: 1.22ms
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 435.71µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 425.58µs
+GKR Verification result: true
+test tests::gkr_tests::tests::test_liquidity_proof_verification ... ok
+⏱ GKR Proof Generation Time: 430.38µs
+GKR Verification result: true
+test tests::gkr_tests::tests::test_liquidity_proof_edge_cases ... ok
+⏱ GKR Proof Generation Time: 500.88µs
+⏱ GKR Proof Generation Time: 499.50µs
+GKR Verification result: true
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 432.42µs
+GKR Verification result: true
+test tests::gkr_tests::tests::test_liquidity_proof_with_after_hook ... ok
+Single Proof (empty prev, 32 bytes): 0x146272d167304fefa53654fbabdbd34cc175fe77cd8f6c4dd4724d3ded7bec1c
+Individual Proofs (1 × 32 bytes):
+  Proof 0: 0x146272d167304fefa53654fbabdbd34cc175fe77cd8f6c4dd4724d3ded7bec1c
+Single Proof (32 bytes): 0x912fdec517897f955ff3a0bd5363900230557bb4603cfb794027e805c0a2ef13
+Alt Proof (32 bytes): 0x96c5adcbe1d510996b105e8d13f7311022e3e6df9f0e3134a008bb772aa4f312
+Individual Proofs (1 × 32 bytes):
+Individual Proofs (1 × 32 bytes):
+  Proof 0: 0x912fdec517897f955ff3a0bd5363900230557bb4603cfb794027e805c0a2ef13
+  Proof 0: 0x96c5adcbe1d510996b105e8d13f7311022e3e6df9f0e3134a008bb772aa4f312
+test tests::gkr_tests::tests::test_gkr_proof_empty_previous_proofs ... ok
+⏱ GKR Proof Generation Time: 436.46µs
+GKR Verification result: true
+test tests::cross_chain_tests::tests::test_cross_chain_state_root_verification ... ok
+test tests::cross_chain_tests::tests::test_cross_chain_alternative_proof ... ok
+⏱ GKR Proof Generation Time: 539.08µs
+⏱ GKR Proof Generation Time: 431.29µs
+test tests::gkr_tests::tests::test_liquidity_proof_negative_delta ... GKR Verification result: true
+GKR Verification result: true
+ok
+test tests::gkr_tests::tests::test_swap_circuit_gkr_proof ... ok
+⏱ GKR Proof Generation Time: 370.00µs
+test tests::gkr_tests::tests::test_liquidity_proof_with_before_hook ... ok
+GKR Verification result: true
+GKR Verification result: false
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_invalid_hash ... ok
+⏱ GKR Proof Generation Time: 502.38µs
+GKR Verification result: true
+test tests::gkr_tests::tests::test_cross_chain_proof ... ok
+⏱ GKR Proof Generation Time: 433.00µs
+⏱ GKR Proof Generation Time: 423.75µs
+⏱ GKR Proof Generation Time: 346.13µs
+GKR Verification result: true
+GKR Verification result: true
+test tests::gkr_tests::tests::test_swap_circuit_gkr_proof_with_hooks ... ok
+Single Proof (32 bytes): 0x0c18c1e77873fbb05a86ee00edec656481f7eaed468db23673ff25339de2370f
+Individual Proofs (1 × 32 bytes):
+  Proof 0: 0x0c18c1e77873fbb05a86ee00edec656481f7eaed468db23673ff25339de2370f
+⏱ GKR Proof Generation Time: 432.88µs
+GKR Verification result: true
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_generation ... ok
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_with_after_hook ... ok
+GKR Verification result: false
+test tests::swap_circuit_tests::tests::test_swap_proof_invalid_hash ... ok
+SwapMath error in define: SqrtPriceMathError(PriceOverflow)
+⏱ GKR Proof Generation Time: 432.92µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 396.29µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 360.13µs
+GKR Verification result: true
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_with_before_hook ... ok
+⏱ GKR Proof Generation Time: 429.58µs
+GKR Verification result: true
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_edge_cases ... ok
+test tests::swap_circuit_tests::tests::test_invalid_slippage ... ok
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_with_negative_delta ... ok
+⏱ GKR Proof Generation Time: 378.21µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 992.96µs
+⏱ GKR Proof Generation Time: 2.01ms
+SwapMath error in define: SqrtPriceMathError(InvalidPriceOrLiquidity)
+GKR Verification result: true
+test tests::swap_circuit_tests::tests::test_swap_with_after_hook ... ok
+test tests::liquidity_circuit_tests::tests::test_liquidity_proof_verification ... ok
+SwapMath error in define: SqrtPriceMathError(PriceOverflow)
+GKR Verification result: true
+Batch Proof (32 bytes): 0x17febbfd73ae2ca4622ac81a461f541e43edd6402773102d38f93ae5ffa76818
+Individual Proofs (3 × 32 bytes):
+  Proof 0: 0x38c7d6d84559c60f0ed5c4a81e40bdd5f6a71bfdae81a84b4fe7668a4c921d20
+  Proof 1: 0x0c18c1e77873fbb05a86ee00edec656481f7eaed468db23673ff25339de2370f
+  Proof 2: 0x912fdec517897f955ff3a0bd5363900230557bb4603cfb794027e805c0a2ef13
+Gen Time: 2025µs
+test tests::gkr_tests::tests::test_gkr_batch_proof ... ok
+⏱ GKR Proof Generation Time: 394.42µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 375.71µs
+GKR Verification result: true
+⏱ GKR Proof Generation Time: 341.79µs
+test tests::swap_circuit_tests::tests::test_valid_swap_single ... ok
+GKR Verification result: true
+test tests::swap_circuit_tests::tests::test_swap_with_before_hook ... ok
+test tests::swap_circuit_tests::tests::test_zero_inputs ... ok
+⏱ GKR Proof Generation Time: 1.77ms
+GKR Verification result: true
+Batch Proof (32 bytes): 0x5765263b456932e89c861833ac494de7e1b79bd22a8ca4092740d4dc3beb6d2a
+Individual Proofs (3 × 32 bytes):
+  Proof 0: 0x0c18c1e77873fbb05a86ee00edec656481f7eaed468db23673ff25339de2370f
+  Proof 1: 0x87dc92ed351722b6a8507090dce3c1e339df0db49df636fe62a45454f2f7ec23
+  Proof 2: 0x55493b6167545e2dde91d66027fb6149617815fc47194d725f15f42d8396e90b
+Gen Time: 1781µs
+test tests::liquidity_circuit_tests::tests::test_liquidity_batch ... ok
+⏱ GKR Proof Generation Time: 1.73ms
+GKR Verification result: true
+Batch Proof (32 bytes): 0xefff38b1c6a82cf866a42cca5b5383e6e8a57610ef9e55cd13a39d8e7e0e9007
+Individual Proofs (3 × 32 bytes):
+  Proof 0: 0x843c337fd7540b8c8ea700d82d1ff4fee93f1a77c21f0318a557b16cf456a82a
+  Proof 1: 0x86e23f093f707067897a899072369bae1a02c335bfda51859e77ed86b08f8713
+  Proof 2: 0x060e0113ac0f0881ab1127e17a8ce11cc69d451c7e2594937775d36515b3f727
+Gen Time: 1742µs
+test tests::swap_circuit_tests::tests::test_swap_batch ... ok
+⏱ GKR Proof Generation Time: 1.98ms
+GKR Verification result: true
+Batch Proof (32 bytes): 0xa78908d114b690f6f85370ec5e56c7d0376a34517ba98fed551176992ebcd90f
+Individual Proofs (3 × 32 bytes):
+  Proof 0: 0x912fdec517897f955ff3a0bd5363900230557bb4603cfb794027e805c0a2ef13
+  Proof 1: 0x6fa7bc21e7745992c596a6546a8842465d5b7210c91e1fc2582aa8e6fa91381b
+  Proof 2: 0x5e740d6ea796d4ca8d67016001db62a7ba832cb50937c526d74ef4ed4bb9352f
+Gen Time: 1991µs
+test tests::cross_chain_tests::tests::test_cross_chain_batch ... ok
+
+test result: ok. 69 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
